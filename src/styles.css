@@ -1,0 +1,187 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * MUSA design system — Mercado de Beleza & Moda (Luanda)
+ * Neon pink on warm off-white paper, editorial serif + geometric sans.
+ * All colors are oklch semantic tokens. Never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-deep: var(--primary-deep);
+  --color-primary-wash: var(--primary-wash);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted-soft: var(--muted-soft);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  --shadow-neon: 0 8px 22px -8px var(--neon-shadow);
+  --shadow-neon-lg: 0 16px 40px -12px var(--neon-shadow);
+  --shadow-soft: 0 10px 30px -18px oklch(0.2 0.02 300 / 0.35);
+}
+
+:root {
+  --radius: 0.9rem;
+
+  --background: oklch(0.977 0.005 60);
+  --foreground: oklch(0.19 0.01 285);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.19 0.01 285);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.19 0.01 285);
+
+  --primary: oklch(0.652 0.288 350.5);
+  --primary-foreground: oklch(1 0 0);
+  --primary-deep: oklch(0.578 0.27 349);
+  --primary-wash: oklch(0.947 0.043 348);
+
+  --secondary: oklch(0.955 0.006 60);
+  --secondary-foreground: oklch(0.19 0.01 285);
+  --muted: oklch(0.955 0.006 60);
+  --muted-foreground: oklch(0.61 0.012 65);
+  --muted-soft: oklch(0.755 0.014 70);
+  --accent: oklch(0.947 0.043 348);
+  --accent-foreground: oklch(0.578 0.27 349);
+
+  --destructive: oklch(0.577 0.245 27.3);
+  --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.6 0.15 152);
+  --success-foreground: oklch(1 0 0);
+
+  --border: oklch(0.19 0.01 285 / 0.09);
+  --border-soft: oklch(0.19 0.01 285 / 0.05);
+  --input: oklch(0.19 0.01 285 / 0.12);
+  --ring: oklch(0.652 0.288 350.5);
+
+  --neon-shadow: oklch(0.652 0.288 350.5 / 0.55);
+  --ink-panel: linear-gradient(135deg, oklch(0.19 0.01 285), oklch(0.26 0.06 340));
+}
+
+.dark {
+  --background: oklch(0.17 0.012 300);
+  --foreground: oklch(0.97 0.004 60);
+  --card: oklch(0.22 0.015 300);
+  --card-foreground: oklch(0.97 0.004 60);
+  --popover: oklch(0.22 0.015 300);
+  --popover-foreground: oklch(0.97 0.004 60);
+
+  --primary: oklch(0.68 0.29 350.5);
+  --primary-foreground: oklch(0.15 0.01 300);
+  --primary-deep: oklch(0.75 0.24 349);
+  --primary-wash: oklch(0.3 0.08 345);
+
+  --secondary: oklch(0.26 0.015 300);
+  --secondary-foreground: oklch(0.97 0.004 60);
+  --muted: oklch(0.26 0.015 300);
+  --muted-foreground: oklch(0.72 0.012 70);
+  --muted-soft: oklch(0.6 0.014 70);
+  --accent: oklch(0.3 0.08 345);
+  --accent-foreground: oklch(0.9 0.12 348);
+
+  --border: oklch(1 0 0 / 0.12);
+  --border-soft: oklch(1 0 0 / 0.07);
+  --input: oklch(1 0 0 / 0.16);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  * {
+    scrollbar-width: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* ---- Editorial helpers ---- */
+@utility display {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+@utility neon-text {
+  color: var(--color-primary);
+  text-shadow: 0 0 14px var(--neon-shadow);
+}
+
+@utility ink-panel {
+  background: var(--ink-panel);
+  color: oklch(0.99 0 0);
+}
+
+@utility neon-halo {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, var(--neon-shadow), transparent 70%);
+    top: -70px;
+    right: -60px;
+    filter: blur(8px);
+    pointer-events: none;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
