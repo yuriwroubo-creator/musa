@@ -912,8 +912,6 @@ function ForYouFeed({
   onProductClick: (product: any) => void;
   onServiceClick: (service: any) => void;
 }) {
-  if (items.length === 0) return null;
-
   return (
     <section id="for-you-feed" className="pt-5">
       <div className="flex items-end justify-between gap-3">
@@ -922,6 +920,9 @@ function ForYouFeed({
           Feed
         </span>
       </div>
+      {items.length === 0 ? (
+        <Empty message="O feed Para você vai aparecer aqui quando houver publicações reais." />
+      ) : (
       <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pt-3.5 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
         {items.map((item: any) =>
           item._kind === "product" ? (
@@ -972,6 +973,7 @@ function ForYouFeed({
           ),
         )}
       </div>
+      )}
     </section>
   );
 }

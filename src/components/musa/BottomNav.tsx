@@ -34,7 +34,12 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
     if (item.action === "feed") {
       navigate({ to: "/" });
       window.setTimeout(() => {
-        document.getElementById("for-you-feed")?.scrollIntoView({ behavior: "smooth" });
+        const feed = document.getElementById("for-you-feed");
+        if (feed) {
+          feed.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
       }, 80);
       return;
     }

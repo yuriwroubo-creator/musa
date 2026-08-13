@@ -43,6 +43,94 @@ const categories = [
   "Outros",
 ];
 
+const blockedWords = [
+  "sexo",
+  "porn",
+  "porno",
+  "nude",
+  "nudes",
+  "erotico",
+  "erótico",
+  "racista",
+  "racismo",
+  "odio",
+  "ódio",
+  "droga",
+  "drogas",
+  "cocaina",
+  "cocaína",
+  "fraude",
+  "golpe",
+  "arma",
+  "matar",
+  "assassino",
+  "ilegal",
+  "contrabando",
+];
+
+function normalizeText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function meaningfulWords(value: string) {
+  return normalizeText(value)
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word.length >= 2);
+}
+
+function hasBlockedWords(...values: string[]) {
+  const text = normalizeText(values.join(" "));
+  return blockedWords.some((word) => text.includes(normalizeText(word)));
+}
+
+function validateStep1(shopName: string, ownerName: string, phone: string) {
+  const errors: string[] = [];
+  if (meaningfulWords(shopName).length < 2) {
+    errors.push("Escreve o nome da loja/profissional com pelo menos 2 palavras.");
+  }
+  if (meaningfulWords(ownerName).length < 2) {
+    errors.push("Escreve o nome completo da titular.");
+  }
+  const phoneDigits = phone.replace(/\D/g, "");
+  if (phoneDigits.length > 0 && phoneDigits.length < 9) {
+    errors.push("O WhatsApp deve ter pelo menos 9 números.");
+  }
+  if (hasBlockedWords(shopName, ownerName)) {
+    errors.push("Remove palavras ofensivas ou impróprias dos dados da loja.");
+  }
+  return errors;
+}
+
+function validateStep2(
+  productName: string,
+  productPrice: string,
+  productCategory: string,
+  productDesc: string,
+) {
+  const errors: string[] = [];
+  if (meaningfulWords(productName).length < 2) {
+    errors.push("Escreve um nome mais completo para a publicação.");
+  }
+  const price = Number(productPrice);
+  if (!productPrice.trim() || Number.isNaN(price) || price <= 0) {
+    errors.push("Indica um preço válido em AOA.");
+  }
+  if (!productCategory) {
+    errors.push("Escolhe uma categoria.");
+  }
+  if (productDesc.trim() && meaningfulWords(productDesc).length < 4) {
+    errors.push("A descrição precisa de mais detalhe ou pode ficar vazia.");
+  }
+  if (hasBlockedWords(productName, productDesc)) {
+    errors.push("Remove palavras ofensivas, obscenas ou ilegais da publicação.");
+  }
+  return errors;
+}
+
 export function SellModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, session, signInWithGoogle } = useAuth();
   const [step, setStep] = useState(1);
@@ -60,11 +148,29 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
 
   const code = useMemo(() => `MUSA-${Math.floor(10000 + Math.random() * 89999)}`, []);
 
-  const step1Valid = shopName.trim() && ownerName.trim();
-  const step2Valid = productName.trim() && productPrice.trim() && productCategory;
+  const step1Errors = useMemo(
+    () => validateStep1(shopName, ownerName, phone),
+    [shopName, ownerName, phone],
+  );
+  const step2Errors = useMemo(
+    () => validateStep2(productName, productPrice, productCategory, productDesc),
+    [productName, productPrice, productCategory, productDesc],
+  );
+  const step1Valid = step1Errors.length === 0;
+  const step2Valid = step2Errors.length === 0;
 
   const mutation = useMutation({
     mutationFn: async () => {
+      const currentStepErrors = validateStep2(
+        productName,
+        productPrice,
+        productCategory,
+        productDesc,
+      );
+      if (currentStepErrors.length > 0) {
+        throw new Error(currentStepErrors[0]);
+      }
+
       // 1. AI Moderation Check
       const aiResult = await checkContent({
         data: {
@@ -132,6 +238,14 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
     setProductDesc("");
     setMediaUrls([]);
     onClose();
+  };
+
+  const handleNext = () => {
+    if (!step1Valid) {
+      toast.error("Completa os dados da loja", { description: step1Errors[0] });
+      return;
+    }
+    setStep(2);
   };
 
   return (
@@ -230,6 +344,7 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
                 value={phone}
                 onChange={setPhone}
               />
+              <ValidationList errors={step1Errors} />
 
               <div className="mt-2">
                 <TurnstileWidget onVerify={setTurnstileToken} action="vendor_form" />
@@ -331,6 +446,7 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
                   </p>
                 )}
               </div>
+              <ValidationList errors={step2Errors} />
             </div>
           ) : step === 3 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
@@ -349,7 +465,7 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
         {user && step < 3 && (
           <div className="sticky bottom-0 border-t border-border-soft bg-background/80 p-5 backdrop-blur-md lg:p-6">
             <button
-              onClick={step === 1 ? () => setStep(2) : () => mutation.mutate()}
+              onClick={step === 1 ? handleNext : () => mutation.mutate()}
               disabled={step === 1 ? !step1Valid : !step2Valid || mutation.isPending}
               className="flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3.5 text-[13px] font-bold text-primary-foreground shadow-neon transition-all disabled:opacity-50"
             >
@@ -358,6 +474,27 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ValidationList({ errors }: { errors: string[] }) {
+  if (errors.length === 0) {
+    return (
+      <div className="mb-5 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-[11px] font-semibold text-primary">
+        <ShieldCheck className="size-3.5" />
+        Tudo certo para avançar.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-5 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2">
+      {errors.map((error) => (
+        <p key={error} className="text-[11px] font-semibold text-destructive">
+          {error}
+        </p>
+      ))}
     </div>
   );
 }
