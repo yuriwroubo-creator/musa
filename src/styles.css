@@ -56,66 +56,69 @@
 }
 
 :root {
-  --radius: 0.9rem;
+  --radius: 1.25rem; /* Generous radius for pills and cards */
 
-  --background: oklch(0.977 0.005 60);
-  --foreground: oklch(0.19 0.01 285);
+  /* Light Theme - Clean White Base */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.15 0 0); /* Almost black for high readability */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.01 285);
+  --card-foreground: oklch(0.15 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.19 0.01 285);
+  --popover-foreground: oklch(0.15 0 0);
 
-  --primary: oklch(0.652 0.288 350.5);
+  /* Neon Rose / Pink as Primary */
+  --primary: oklch(0.64 0.25 350); /* #FF2D78 approximate */
   --primary-foreground: oklch(1 0 0);
-  --primary-deep: oklch(0.578 0.27 349);
-  --primary-wash: oklch(0.947 0.043 348);
+  --primary-deep: oklch(0.55 0.25 350); 
+  --primary-wash: oklch(0.95 0.05 350);
 
-  --secondary: oklch(0.955 0.006 60);
-  --secondary-foreground: oklch(0.19 0.01 285);
-  --muted: oklch(0.955 0.006 60);
-  --muted-foreground: oklch(0.61 0.012 65);
-  --muted-soft: oklch(0.755 0.014 70);
-  --accent: oklch(0.947 0.043 348);
-  --accent-foreground: oklch(0.578 0.27 349);
+  --secondary: oklch(0.96 0.01 285);
+  --secondary-foreground: oklch(0.15 0 0);
+  --muted: oklch(0.96 0.01 285);
+  --muted-foreground: oklch(0.45 0.01 285); /* Darker gray for better readability */
+  --muted-soft: oklch(0.85 0.01 285);
+  --accent: oklch(0.95 0.05 350);
+  --accent-foreground: oklch(0.64 0.25 350);
 
-  --destructive: oklch(0.577 0.245 27.3);
+  --destructive: oklch(0.6 0.25 25);
   --destructive-foreground: oklch(1 0 0);
-  --success: oklch(0.6 0.15 152);
+  --success: oklch(0.65 0.15 150);
   --success-foreground: oklch(1 0 0);
 
-  --border: oklch(0.19 0.01 285 / 0.09);
-  --border-soft: oklch(0.19 0.01 285 / 0.05);
-  --input: oklch(0.19 0.01 285 / 0.12);
-  --ring: oklch(0.652 0.288 350.5);
+  --border: oklch(0.9 0.01 285);
+  --border-soft: oklch(0.94 0.01 285);
+  --input: oklch(0.9 0.01 285);
+  --ring: oklch(0.64 0.25 350);
 
-  --neon-shadow: oklch(0.652 0.288 350.5 / 0.55);
-  --ink-panel: linear-gradient(135deg, oklch(0.19 0.01 285), oklch(0.26 0.06 340));
+  --neon-shadow: oklch(0.64 0.25 350 / 0.4);
+  --ink-panel: linear-gradient(135deg, oklch(0.15 0 0), oklch(0.2 0 0));
 }
 
 .dark {
-  --background: oklch(0.17 0.012 300);
-  --foreground: oklch(0.97 0.004 60);
-  --card: oklch(0.22 0.015 300);
-  --card-foreground: oklch(0.97 0.004 60);
-  --popover: oklch(0.22 0.015 300);
-  --popover-foreground: oklch(0.97 0.004 60);
+  /* Subtle Dark Mode - Not pitch black, but elegant dark gray */
+  --background: oklch(0.15 0 0);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.18 0 0);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.18 0 0);
+  --popover-foreground: oklch(0.98 0 0);
 
-  --primary: oklch(0.68 0.29 350.5);
-  --primary-foreground: oklch(0.15 0.01 300);
-  --primary-deep: oklch(0.75 0.24 349);
-  --primary-wash: oklch(0.3 0.08 345);
+  --primary: oklch(0.7 0.22 350); 
+  --primary-foreground: oklch(1 0 0); /* Text inside pink buttons should be white! */
+  --primary-deep: oklch(0.6 0.22 350);
+  --primary-wash: oklch(0.25 0.05 350);
 
-  --secondary: oklch(0.26 0.015 300);
-  --secondary-foreground: oklch(0.97 0.004 60);
-  --muted: oklch(0.26 0.015 300);
-  --muted-foreground: oklch(0.72 0.012 70);
-  --muted-soft: oklch(0.6 0.014 70);
-  --accent: oklch(0.3 0.08 345);
-  --accent-foreground: oklch(0.9 0.12 348);
+  --secondary: oklch(0.22 0 0);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.22 0 0);
+  --muted-foreground: oklch(0.7 0 0); /* Lighter gray for readability on dark */
+  --muted-soft: oklch(0.3 0 0);
+  --accent: oklch(0.25 0.05 350);
+  --accent-foreground: oklch(0.8 0.15 350);
 
-  --border: oklch(1 0 0 / 0.12);
-  --border-soft: oklch(1 0 0 / 0.07);
-  --input: oklch(1 0 0 / 0.16);
+  --border: oklch(0.3 0 0);
+  --border-soft: oklch(0.25 0 0);
+  --input: oklch(0.3 0 0);
 }
 
 @layer base {

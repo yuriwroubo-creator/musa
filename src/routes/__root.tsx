@@ -13,9 +13,10 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
 import { SellProvider, useSellModal } from "@/lib/SellContext";
+import { AudioProvider } from "@/lib/AudioContext";
 import { BottomNav } from "@/components/musa/BottomNav";
 import { SellModal } from "@/components/musa/SellModal";
-
+import { GlobalAudioPlayer } from "@/components/musa/GlobalAudioPlayer";
 
 function NotFoundComponent() {
   return (
@@ -82,6 +83,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "theme-color", content: "#FF2D78" },
       { title: "MUSA — Mercado de Beleza & Moda" },
       {
         name: "description",
@@ -102,6 +104,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -135,17 +138,25 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(console.error);
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <SellProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
-        
-        {/* Global Modals and Navigation */}
-        <GlobalComponents />
-        
-        <Toaster position="top-center" />
-      </SellProvider>
+      <AudioProvider>
+        <SellProvider>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+          
+          {/* Global Modals and Navigation */}
+          <GlobalComponents />
+          
+          <Toaster position="top-center" />
+        </SellProvider>
+      </AudioProvider>
     </QueryClientProvider>
   );
 }
@@ -162,6 +173,7 @@ function GlobalComponents() {
         }}
       />
       <SellModal open={sellOpen} onClose={() => setSellOpen(false)} />
+      <GlobalAudioPlayer />
     </>
   );
 }

@@ -54,7 +54,7 @@ export function SiteHeader({
 
           {/* Logo */}
           <a href="/" className="flex items-center gap-1.5 lg:order-first">
-            <span className="display text-2xl leading-none tracking-[0.06em]">MUSA</span>
+            <span className="display text-2xl font-black leading-none tracking-[0.04em] text-foreground">MUSA</span>
             <span className="neon-text -translate-y-2 text-[13px]">✦</span>
           </a>
 
@@ -81,7 +81,7 @@ export function SiteHeader({
             <button
               onClick={onSellClick}
               id="btn-sell-header"
-              className="mr-1 hidden rounded-xl bg-gradient-to-r from-primary to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow-neon transition-all hover:opacity-90 active:scale-95 lg:block"
+              className="mr-1 hidden rounded-xl bg-gradient-to-r from-primary to-[#FF6DB0] px-4 py-2.5 text-xs font-bold text-white shadow-neon transition-all hover:opacity-90 active:scale-95 lg:block"
             >
               + Publicar Grátis
             </button>
@@ -125,7 +125,7 @@ export function SiteHeader({
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={initials} className="size-full object-cover" />
                 ) : (
-                  <span className="flex size-full items-center justify-center bg-gradient-to-br from-primary to-purple-600 text-[11px] font-bold text-white">
+                  <span className="flex size-full items-center justify-center bg-gradient-to-br from-primary to-[#FF6DB0] text-[11px] font-bold text-white">
                     {initials}
                   </span>
                 )}
@@ -177,7 +177,7 @@ export function SiteHeader({
           <div className="mt-2 rounded-2xl border border-border-soft bg-card p-4 lg:hidden">
             <button
               onClick={() => { onSellClick(); setMenuOpen(false); }}
-              className="w-full rounded-xl bg-gradient-to-r from-primary to-purple-600 px-4 py-3 text-sm font-bold text-white shadow-neon"
+              className="w-full rounded-xl bg-gradient-to-r from-primary to-[#FF6DB0] px-4 py-3 text-sm font-bold text-white shadow-neon"
             >
               + Publicar Produto/Serviço — Grátis
             </button>

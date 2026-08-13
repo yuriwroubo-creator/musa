@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { globalSearch } from "@/lib/algolia";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,36 +64,57 @@ function Index() {
   const isDev = import.meta.env.DEV;
 
   // Supabase Queries
-  const { data: dbProducts, isLoading: loadingProducts, error: errorProducts } = useQuery({
-    queryKey: ["products"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("*");
+  const {
+    data: productsData,
+    fetchNextPage: fetchNextProducts,
+    hasNextPage: hasNextProducts,
+    isFetchingNextPage: isFetchingNextProducts,
+    isLoading: loadingProducts,
+    error: errorProducts,
+  } = useInfiniteQuery({
+    queryKey: ["products_with_views"],
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => (lastPage.length === 12 ? allPages.length : undefined),
+    queryFn: async ({ pageParam = 0 }) => {
+      const { data, error } = await supabase
+        .from("products_with_views")
+        .select("*")
+        .order("views_count", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .range(pageParam * 12, (pageParam + 1) * 12 - 1);
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
-  const { data: dbServices, isLoading: loadingServices, error: errorServices } = useQuery({
+  const {
+    data: servicesData,
+    fetchNextPage: fetchNextServices,
+    hasNextPage: hasNextServices,
+    isFetchingNextPage: isFetchingNextServices,
+    isLoading: loadingServices,
+    error: errorServices,
+  } = useInfiniteQuery({
     queryKey: ["services"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("services").select("*");
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => (lastPage.length === 12 ? allPages.length : undefined),
+    queryFn: async ({ pageParam = 0 }) => {
+      const { data, error } = await supabase
+        .from("services")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(pageParam * 12, (pageParam + 1) * 12 - 1);
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
-  const { data: dbVendors, isLoading: loadingVendors, error: errorVendors } = useQuery({
-    queryKey: ["vendor_subscriptions"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("vendor_subscriptions").select("*").eq("status", "active");
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Base Data (Flatten infinite pages)
+  const dbProducts = useMemo(() => productsData?.pages.flat() || [], [productsData]);
+  const dbServices = useMemo(() => servicesData?.pages.flat() || [], [servicesData]);
 
-  // Base Data (Fallback to local mock ONLY in dev if DB is empty)
-  const baseProducts = isDev && (!dbProducts || dbProducts.length === 0) ? products : (dbProducts ?? []);
-  const baseServices = isDev && (!dbServices || dbServices.length === 0) ? services : (dbServices ?? []);
+  const baseProducts = isDev && dbProducts.length === 0 ? products : dbProducts;
+  const baseServices = isDev && dbServices.length === 0 ? services : dbServices;
   const baseVendors = isDev && (!dbVendors || dbVendors.length === 0) ? vendors : (dbVendors ?? []);
 
   const { follows, isLoading: loadingFollows } = useFollows();
@@ -155,6 +176,29 @@ function Index() {
       toast.success("Agendamento confirmado! ✅", { description: item.title });
     }
   };
+
+  // Intersection Observer for Infinite Scroll
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          if (tab === "produtos" && hasNextProducts && !isFetchingNextProducts) {
+            fetchNextProducts();
+          } else if (tab === "servicos" && hasNextServices && !isFetchingNextServices) {
+            fetchNextServices();
+          }
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+    return () => observer.disconnect();
+  }, [tab, hasNextProducts, isFetchingNextProducts, fetchNextProducts, hasNextServices, isFetchingNextServices, fetchNextServices]);
 
   return (
     <div className="min-h-screen pb-28 lg:pb-0">
@@ -223,6 +267,12 @@ function Index() {
                 ))}
               </div>
             )}
+            
+            {(hasNextProducts || isFetchingNextProducts) && visibleProducts.length > 0 && (
+              <div ref={loadMoreRef} className="py-8 text-center">
+                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            )}
           </section>
         )}
 
@@ -255,6 +305,12 @@ function Index() {
                     }
                   />
                 ))}
+              </div>
+            )}
+            
+            {(hasNextServices || isFetchingNextServices) && visibleServices.length > 0 && (
+              <div ref={loadMoreRef} className="py-8 text-center">
+                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               </div>
             )}
           </section>

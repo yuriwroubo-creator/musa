@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Camera, X, Play, Upload, Loader2 } from 'lucide-react';
+import { Camera, X, Play, Upload, Loader2, Music } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MediaUploaderProps {
@@ -13,7 +13,7 @@ interface MediaUploaderProps {
 export const MediaUploader: React.FC<MediaUploaderProps> = ({
   onUploadComplete,
   maxFiles = 5,
-  accept = 'image/*,video/*'
+  accept = 'image/*,video/*,audio/*,.mp3,.wav,.aac'
 }) => {
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
@@ -40,11 +40,11 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     }
 
     const validFiles = newFiles.filter(
-      (file) => file.type.startsWith('image/') || file.type.startsWith('video/')
+      (file) => file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/') || file.name.match(/\.(mp3|wav|aac)$/i)
     );
 
     if (validFiles.length !== newFiles.length) {
-      toast.error('Apenas imagens e vídeos são suportados.');
+      toast.error('Apenas imagens, vídeos e áudios são suportados.');
     }
 
     setFiles((prev) => [...prev, ...validFiles]);
@@ -52,7 +52,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     // Create previews
     const newPreviews = validFiles.map((file) => ({
       url: URL.createObjectURL(file),
-      type: file.type.split('/')[0]
+      type: file.type.split('/')[0] === 'audio' || file.name.match(/\.(mp3|wav|aac)$/i) ? 'audio' : file.type.split('/')[0] || 'unknown'
     }));
     setPreviews((prev) => [...prev, ...newPreviews]);
   };
@@ -157,7 +157,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
           </div>
           
           <p className="text-sm font-medium text-primary-foreground mb-1">
-            Arrasta fotos ou vídeos aqui
+            Arrasta fotos, vídeos ou áudios aqui
           </p>
           <p className="text-xs text-muted-foreground">
             ou clica para selecionar (máx. {maxFiles})
@@ -182,6 +182,11 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
             <div key={index} className="relative aspect-square rounded-xl overflow-hidden bg-secondary group border border-border-soft shadow-sm">
               {preview.type === 'image' ? (
                 <img src={preview.url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+              ) : preview.type === 'audio' ? (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-card p-2 text-center">
+                  <Music className="w-8 h-8 text-primary mb-1" />
+                  <span className="text-[10px] text-muted-foreground truncate w-full">Áudio</span>
+                </div>
               ) : (
                 <div className="relative w-full h-full">
                   <video src={preview.url} className="w-full h-full object-cover" />

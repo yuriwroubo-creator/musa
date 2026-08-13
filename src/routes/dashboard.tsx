@@ -108,18 +108,18 @@ function TabResumo() {
 
   return (
     <div className="space-y-6">
-      <div className="mb-2">
-        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">
+      <div className="mb-4">
+        <h2 className="text-2xl font-black text-foreground">
           Olá, {user?.user_metadata?.full_name || 'Criadora'}! ✨
         </h2>
-        <p className="text-sm text-muted-foreground">Aqui está o resumo do teu estúdio hoje.</p>
+        <p className="text-sm font-medium text-muted-foreground mt-1">Aqui está o resumo do teu estúdio hoje.</p>
       </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => setSellOpen(true)}
-          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white shadow-neon hover:scale-[1.02] transition-transform"
+          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-primary to-[#FF6DB0] text-white shadow-neon hover:scale-[1.02] transition-transform"
         >
           <Plus className="w-6 h-6 mb-1" />
           <span className="font-semibold text-sm">Nova Publicação</span>
@@ -174,9 +174,9 @@ function StatCard({ icon, label, value, loading }: { icon: React.ReactNode, labe
         {loading ? (
           <div className="h-7 w-16 bg-secondary animate-pulse rounded mb-1" />
         ) : (
-          <h3 className="text-2xl font-bold text-primary-foreground">{value}</h3>
+          <h3 className="text-2xl font-black text-foreground">{value}</h3>
         )}
-        <p className="text-xs text-muted-foreground font-medium">{label}</p>
+        <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">{label}</p>
       </div>
     </div>
   );
@@ -216,14 +216,14 @@ function TabPublicacoes() {
   if (!listings || listings.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
-        <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-2">
-          <Package className="w-8 h-8 text-muted-foreground" />
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+          <Package className="w-8 h-8 text-primary" />
         </div>
-        <h3 className="font-semibold text-lg text-primary-foreground">Nenhuma publicação</h3>
-        <p className="text-sm text-muted-foreground max-w-[250px]">
+        <h3 className="font-semibold text-lg text-foreground">Nenhuma publicação</h3>
+        <p className="text-sm font-medium text-muted-foreground max-w-[250px]">
           Ainda não tens nenhum produto ou serviço publicado.
         </p>
-        <button className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium shadow-neon">
+        <button onClick={() => setSellOpen?.(true)} className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-[#FF6DB0] text-white font-bold shadow-neon">
           Adicionar Publicação
         </button>
       </div>

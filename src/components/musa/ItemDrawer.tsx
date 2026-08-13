@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ReviewSection } from "./ReviewSection";
 
 export type DrawerItem = {
   kind: "product" | "service";
   img: string;
   title: string;
   price: string;
+  vendor_id?: string;
 };
 
 const sizes = ["S", "M", "L", "XL"];
@@ -98,6 +100,12 @@ export function ItemDrawer({
         >
           {isProduct ? "Adicionar ao Carrinho" : "Confirmar Agendamento"}
         </button>
+
+        {item?.vendor_id && (
+          <div className="mt-8 border-t border-border-soft pt-4">
+            <ReviewSection vendorId={item.vendor_id} />
+          </div>
+        )}
       </div>
     </>
   );

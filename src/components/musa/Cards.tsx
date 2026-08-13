@@ -1,4 +1,4 @@
-import { Star, Check, MapPin, Heart } from "lucide-react";
+import { Star, Check, MapPin, Heart, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Product, Service, Vendor } from "@/lib/musa-data";
 import { useState } from "react";
@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFollows } from "@/hooks/useFollows";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAudio } from "@/lib/AudioContext";
 
 export function ProductCard({
   product,
@@ -17,8 +18,11 @@ export function ProductCard({
 }) {
   const { checkIsFavorite, toggleFavorite } = useFavorites();
   const { signInWithGoogle, user } = useAuth();
+  const { play, currentTrack, isPlaying, pause } = useAudio();
   
   const isFavorite = checkIsFavorite(product.id);
+  const audioUrl = product.media_urls?.find(url => url.match(/\.(mp3|wav|aac|ogg)$/i));
+  const isThisAudioPlaying = currentTrack === audioUrl && isPlaying;
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -33,11 +37,29 @@ export function ProductCard({
     <article className="group flex flex-col overflow-hidden rounded-[18px] border border-border-soft bg-card transition-all duration-300 hover:shadow-soft hover:-translate-y-0.5">
       <div className="relative aspect-[1/1.15] w-full overflow-hidden">
         <img
-          src={product.img}
+          src={product.img || product.media_urls?.find(u => u.match(/\.(jpg|jpeg|png|webp)$/i)) || "https://placehold.co/400x500/f3f4f6/1f2937?text=MUSA"}
           alt={product.name}
           loading="lazy"
           className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
         />
+        {audioUrl && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              if (isThisAudioPlaying) pause();
+              else play(audioUrl);
+            }}
+            className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors hover:bg-black/20"
+          >
+            <div className={cn(
+              "flex size-10 items-center justify-center rounded-full backdrop-blur-md transition-all shadow-neon",
+              isThisAudioPlaying ? "bg-primary text-white" : "bg-white/80 text-primary"
+            )}>
+              <Play fill="currentColor" className={cn("size-4", !isThisAudioPlaying && "ml-0.5")} />
+            </div>
+          </button>
+        )}
         {/* Rating badge */}
         <span className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-card/90 px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm">
           <Star className="size-2.5 fill-primary text-primary" />

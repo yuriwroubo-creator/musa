@@ -59,27 +59,31 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
               aria-label={item.label}
             >
               {isPublish ? (
-                <span className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-neon">
-                  <Icon className="size-5 text-white" strokeWidth={2} />
+                <span className="flex h-11 w-[3.25rem] items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[#FF6DB0] shadow-neon">
+                  <Icon className="size-5 text-white" strokeWidth={2.2} />
                 </span>
               ) : (
-                <>
-                  <Icon
-                    className={cn(
-                      "size-5 transition-colors",
-                      isActive ? "text-primary" : "text-muted-foreground",
-                    )}
-                    strokeWidth={isActive ? 2.2 : 1.6}
-                  />
+                <div className="flex flex-col items-center gap-1">
                   <span
                     className={cn(
-                      "text-[9px] font-medium transition-colors",
-                      isActive ? "text-primary" : "text-muted-foreground",
+                      "flex size-9 items-center justify-center rounded-full transition-all duration-300",
+                      isActive ? "bg-primary text-white shadow-neon" : "text-muted-foreground",
+                    )}
+                  >
+                    <Icon
+                      className="size-[22px]"
+                      strokeWidth={isActive ? 2.5 : 1.8}
+                    />
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[9px] font-semibold transition-colors tracking-tight",
+                      isActive ? "text-primary" : "text-muted-foreground/70",
                     )}
                   >
                     {item.label}
                   </span>
-                </>
+                </div>
               )}
             </button>
           );

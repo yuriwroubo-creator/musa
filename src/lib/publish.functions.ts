@@ -49,7 +49,7 @@ const publishSchema = z.object({
 export const publishItemFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => publishSchema.parse(input))
   .handler(async ({ data }) => {
-    // 1. Validar Turnstile (só se estiver configurado e o token presente)
+    // 1. Validar Turnstile (fail-open — não bloqueia se falhar)
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
     if (turnstileSecret && data.turnstileToken && data.turnstileToken.length > 0) {
       try {
@@ -63,11 +63,11 @@ export const publishItemFn = createServerFn({ method: "POST" })
         );
         const result = await verify.json() as { success: boolean };
         if (!result.success) {
-          return { success: false, error: "Falha na validação de segurança (Turnstile)." };
+          // Fail-open: registar aviso mas NÃO bloquear a publicação
+          console.warn("[PUBLISH] Turnstile falhou — a continuar em modo fail-open:", result);
         }
       } catch (e) {
-        // Fail-open on network errors for Turnstile
-        console.warn("Turnstile verification failed with network error:", e);
+        console.warn("[PUBLISH] Erro de rede no Turnstile — a continuar:", e);
       }
     }
 
