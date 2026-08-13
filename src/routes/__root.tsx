@@ -12,6 +12,9 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
+import { SellProvider, useSellModal } from "@/lib/SellContext";
+import { BottomNav } from "@/components/musa/BottomNav";
+import { SellModal } from "@/components/musa/SellModal";
 
 
 function NotFoundComponent() {
@@ -134,10 +137,32 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      <Toaster position="top-center" />
+      <SellProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        
+        {/* Global Modals and Navigation */}
+        <GlobalComponents />
+        
+        <Toaster position="top-center" />
+      </SellProvider>
     </QueryClientProvider>
+  );
+}
+
+function GlobalComponents() {
+  const { sellOpen, setSellOpen } = useSellModal();
+  return (
+    <>
+      <BottomNav 
+        onSellClick={() => setSellOpen(true)} 
+        onSearchClick={() => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          setTimeout(() => document.getElementById("mobile-search-input")?.focus(), 100);
+        }}
+      />
+      <SellModal open={sellOpen} onClose={() => setSellOpen(false)} />
+    </>
   );
 }
 

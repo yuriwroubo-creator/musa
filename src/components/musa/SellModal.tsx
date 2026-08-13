@@ -7,6 +7,7 @@ import { checkContent } from "@/lib/moderation/ai-check";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { MediaUploader } from "@/components/musa/MediaUploader";
 
 const steps = [
   "Passo 1 · Dados da Loja",
@@ -38,6 +39,7 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
   const [productDesc, setProductDesc] = useState("");
   const [productType, setProductType] = useState<"produto" | "servico">("produto");
   const [catOpen, setCatOpen] = useState(false);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
 
   const code = useMemo(
     () => `MUSA-${Math.floor(10000 + Math.random() * 89999)}`,
@@ -76,26 +78,27 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
           flagged_for_review: aiResult.flagged_for_review,
           access_token: session?.access_token || "",
           user_id: user?.id || "",
+          media_urls: mediaUrls,
         },
       });
       if (!res.success) throw new Error(res.error || "Erro ao publicar.");
       return res;
     },
     onSuccess: () => {
-      toast.success("Pedido enviado com sucesso! ✅", {
-        description: "A nossa equipa vai rever a publicação em breve.",
+      setStep(3);
+      toast.success("Publicado com sucesso! 🎉", {
+        description: "O teu artigo já está visível na plataforma MUSA.",
       });
-      handleClose();
     },
     onError: (error: any) => {
-      // If it's an AI block error, we show it clearly
-      if (error.message.includes("bloqueado pela nossa moderação")) {
-        toast.error("Submissão Rejeitada", {
-          description: error.message,
-        });
+      const msg = error?.message || "";
+      if (msg.includes("bloqueado pela nossa moderação")) {
+        toast.error("🚫 Conteúdo Rejeitado", { description: msg });
+      } else if (msg.includes("limite diário")) {
+        toast.error("⏳ Limite Atingido", { description: msg });
       } else {
-        toast.error("Ocorreu um erro.", {
-          description: "Não foi possível enviar o pedido de publicação.",
+        toast.error("Erro ao publicar", {
+          description: msg || "Verifica a tua ligação e tenta novamente.",
         });
       }
     },
@@ -111,6 +114,7 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
     setProductPrice("");
     setProductCategory("");
     setProductDesc("");
+    setMediaUrls([]);
     onClose();
   };
 
@@ -289,6 +293,21 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
                   placeholder="Descreve os detalhes, materiais, condições..."
                   className="h-24 w-full resize-none rounded-xl border border-border-soft bg-background px-4 py-3 text-[13.5px] font-medium outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-primary"
                 />
+              </div>
+              <div className="mb-5">
+                <label className="mb-1.5 block px-1 text-[11.5px] font-bold text-muted-foreground">
+                  Fotos e Vídeos
+                  <span className="ml-1 font-normal text-muted-foreground/60">(opcional)</span>
+                </label>
+                <MediaUploader
+                  onUploadComplete={(urls) => setMediaUrls((prev) => [...prev, ...urls])}
+                  maxFiles={5}
+                />
+                {mediaUrls.length > 0 && (
+                  <p className="mt-1.5 px-1 text-[10.5px] text-primary font-medium">
+                    ✓ {mediaUrls.length} {mediaUrls.length === 1 ? 'ficheiro carregado' : 'ficheiros carregados'}
+                  </p>
+                )}
               </div>
             </div>
           ) : step === 3 ? (

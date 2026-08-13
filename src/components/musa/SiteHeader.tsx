@@ -1,8 +1,12 @@
-import { Menu, Search, ShoppingBag, Heart, User, Sun, Moon, MapPin } from "lucide-react";
+import { Menu, Search, ShoppingBag, Heart, User, Sun, Moon, MapPin, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "@tanstack/react-router";
+
+const NotificationCenter = lazy(() =>
+  import("@/components/musa/NotificationCenter").then((m) => ({ default: m.NotificationCenter }))
+);
 
 type Props = {
   query: string;
@@ -27,6 +31,13 @@ export function SiteHeader({
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
+
+  // Get user initials for avatar
+  const initials = user?.user_metadata?.full_name
+    ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
+    : user?.email?.[0]?.toUpperCase() ?? "?";
+
+  const avatarUrl = user?.user_metadata?.avatar_url;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border-soft bg-background/85 backdrop-blur-xl">
@@ -70,7 +81,7 @@ export function SiteHeader({
             <button
               onClick={onSellClick}
               id="btn-sell-header"
-              className="mr-1 hidden rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-neon transition-transform active:scale-95 lg:block"
+              className="mr-1 hidden rounded-xl bg-gradient-to-r from-primary to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow-neon transition-all hover:opacity-90 active:scale-95 lg:block"
             >
               + Publicar Grátis
             </button>
@@ -88,6 +99,14 @@ export function SiteHeader({
               )}
             </button>
 
+            {/* Notifications — only when logged in */}
+            {user && (
+              <Suspense fallback={<div className="size-9" />}>
+                <NotificationCenter />
+              </Suspense>
+            )}
+
+            {/* Favorites */}
             <button
               onClick={() => user ? navigate({ to: "/favoritos" }) : signInWithGoogle()}
               className="hidden size-9 items-center justify-center text-foreground transition-colors hover:bg-secondary rounded-full lg:flex"
@@ -95,13 +114,33 @@ export function SiteHeader({
             >
               <Heart className="size-5" strokeWidth={1.6} />
             </button>
-            <button
-              onClick={() => user ? navigate({ to: "/perfil" }) : signInWithGoogle()}
-              className="hidden size-9 items-center justify-center text-foreground transition-colors hover:bg-secondary rounded-full lg:flex"
-              aria-label="Perfil"
-            >
-              <User className="size-5" strokeWidth={1.6} />
-            </button>
+
+            {/* Dashboard / Profile */}
+            {user ? (
+              <button
+                onClick={() => navigate({ to: "/dashboard" })}
+                className="hidden size-9 items-center justify-center overflow-hidden rounded-full border-2 border-primary/40 transition-all hover:border-primary lg:flex"
+                aria-label="Dashboard"
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={initials} className="size-full object-cover" />
+                ) : (
+                  <span className="flex size-full items-center justify-center bg-gradient-to-br from-primary to-purple-600 text-[11px] font-bold text-white">
+                    {initials}
+                  </span>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={signInWithGoogle}
+                className="hidden size-9 items-center justify-center text-foreground transition-colors hover:bg-secondary rounded-full lg:flex"
+                aria-label="Entrar"
+              >
+                <User className="size-5" strokeWidth={1.6} />
+              </button>
+            )}
+
+            {/* Cart */}
             <button
               onClick={onCartClick}
               className="relative flex size-9 items-center justify-center text-foreground"
@@ -124,6 +163,7 @@ export function SiteHeader({
         <div className="mt-3 flex items-center gap-2.5 rounded-2xl border border-border bg-card px-3.5 py-2.5 lg:hidden">
           <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.8} />
           <input
+            id="mobile-search-input"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             className="w-full bg-transparent text-[13.5px] outline-none placeholder:text-muted-soft"
@@ -137,20 +177,46 @@ export function SiteHeader({
           <div className="mt-2 rounded-2xl border border-border-soft bg-card p-4 lg:hidden">
             <button
               onClick={() => { onSellClick(); setMenuOpen(false); }}
-              className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-neon"
+              className="w-full rounded-xl bg-gradient-to-r from-primary to-purple-600 px-4 py-3 text-sm font-bold text-white shadow-neon"
             >
               + Publicar Produto/Serviço — Grátis
             </button>
             <div className="mt-3 grid grid-cols-3 gap-2">
-              {["Produtos", "Serviços", "Lojas"].map((item) => (
-                <button
-                  key={item}
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
-                >
-                  {item}
-                </button>
-              ))}
+              {user ? (
+                <>
+                  <button
+                    onClick={() => { navigate({ to: "/dashboard" }); setMenuOpen(false); }}
+                    className="flex flex-col items-center gap-1 rounded-xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                  >
+                    <LayoutDashboard className="size-4" />
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={() => { navigate({ to: "/favoritos" }); setMenuOpen(false); }}
+                    className="flex flex-col items-center gap-1 rounded-xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                  >
+                    <Heart className="size-4" />
+                    Favoritos
+                  </button>
+                  <button
+                    onClick={() => { navigate({ to: "/perfil" }); setMenuOpen(false); }}
+                    className="flex flex-col items-center gap-1 rounded-xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                  >
+                    <User className="size-4" />
+                    Perfil
+                  </button>
+                </>
+              ) : (
+                ["Produtos", "Serviços", "Lojas"].map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => setMenuOpen(false)}
+                    className="rounded-xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                  >
+                    {item}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         )}

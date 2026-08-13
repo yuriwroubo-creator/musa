@@ -7,10 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFollows } from "@/hooks/useFollows";
 import { SiteHeader } from "@/components/musa/SiteHeader";
-import { BottomNav } from "@/components/musa/BottomNav";
 import { ProductCard, ServiceCard, VendorCard } from "@/components/musa/Cards";
 import { ItemDrawer, type DrawerItem } from "@/components/musa/ItemDrawer";
-import { SellModal } from "@/components/musa/SellModal";
+import { useSellModal } from "@/lib/SellContext";
 import {
   products,
   services,
@@ -58,7 +57,7 @@ function Index() {
   const [svcCat, setSvcCat] = useState("Todos");
   const [query, setQuery] = useState("");
   const [drawerItem, setDrawerItem] = useState<DrawerItem | null>(null);
-  const [sellOpen, setSellOpen] = useState(false);
+  const { setSellOpen } = useSellModal();
   const [cart, setCart] = useState(0);
 
   const q = query.trim().toLowerCase();
@@ -385,13 +384,11 @@ function Index() {
         </div>
       </footer>
 
-      <BottomNav onSellClick={() => setSellOpen(true)} />
       <ItemDrawer
         item={drawerItem}
         onClose={() => setDrawerItem(null)}
         onConfirm={confirm}
       />
-      <SellModal open={sellOpen} onClose={() => setSellOpen(false)} />
     </div>
   );
 }
