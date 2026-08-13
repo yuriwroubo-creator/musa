@@ -10,9 +10,9 @@ import { SiteHeader } from "@/components/musa/SiteHeader";
 import { ProductCard, ServiceCard, VendorCard } from "@/components/musa/Cards";
 import { ItemDrawer, type DrawerItem } from "@/components/musa/ItemDrawer";
 import { useSellModal } from "@/lib/SellContext";
-import { products, services, vendors, productCategories, serviceCategories } from "@/lib/musa-data";
+import { productCategories, serviceCategories } from "@/lib/musa-data";
 import { cn } from "@/lib/utils";
-import { Check, ChevronRight, Play, ShoppingBag, Sparkles, TrendingUp, Wand2, X } from "lucide-react";
+import { Check, ChevronRight, Play, ShoppingBag, TrendingUp, Wand2, X } from "lucide-react";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import heroLace from "@/assets/prod-lace.jpg";
 import heroVestido from "@/assets/prod-vestido.jpg";
@@ -55,6 +55,84 @@ const tabs: { id: Tab; label: string; emoji: string }[] = [
   { id: "seguidoras", label: "A Seguir", emoji: "💖" },
 ];
 
+function normalizeSearch(value: unknown) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function editDistance(a: string, b: string) {
+  if (a === b) return 0;
+  if (!a) return b.length;
+  if (!b) return a.length;
+
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  const current = Array.from({ length: b.length + 1 }, () => 0);
+
+  for (let i = 1; i <= a.length; i++) {
+    current[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      current[j] = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+
+  return previous[b.length];
+}
+
+function searchScore(item: any, query: string) {
+  const normalizedQuery = normalizeSearch(query);
+  if (!normalizedQuery) return 0;
+
+  const text = normalizeSearch(
+    [
+      item.name,
+      item.title,
+      item.description,
+      item.store,
+      item.business_name,
+      item.full_name,
+      item.category,
+      item.price,
+    ].join(" "),
+  );
+  const words = text.split(/[^a-z0-9]+/).filter(Boolean);
+  const queryWords = normalizedQuery.split(/[^a-z0-9]+/).filter(Boolean);
+
+  let score = 0;
+  if (text.includes(normalizedQuery)) score += 100;
+
+  for (const queryWord of queryWords) {
+    for (const word of words) {
+      if (word === queryWord) score += 28;
+      else if (word.includes(queryWord) || queryWord.includes(word)) score += 14;
+      else {
+        const distance = editDistance(word, queryWord);
+        const tolerance = queryWord.length <= 5 ? 1 : 2;
+        if (distance <= tolerance) score += 10 - distance;
+      }
+    }
+  }
+
+  return score;
+}
+
+function dedupeById<T extends { id?: string; objectID?: string }>(items: T[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const id = item.id || item.objectID;
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
 function Index() {
   const [tab, setTab] = useState<Tab>("produtos");
   const [prodCat, setProdCat] = useState("Todos");
@@ -67,7 +145,6 @@ function Index() {
   const [tasteOpen, setTasteOpen] = useState(false);
 
   const q = query.trim().toLowerCase();
-  const isDev = import.meta.env.DEV;
 
   // Supabase Queries
   const {
@@ -133,13 +210,12 @@ function Index() {
 
       return (data || []).map((vendor) => {
         const displayName = vendor.full_name || vendor.serial_id;
-        const iconText = encodeURIComponent(displayName.split(" ").slice(0, 2).join(" "));
 
         return {
           id: vendor.id,
           name: displayName,
-          cat: vendor.plan || vendor.status || "Vendedora MUSA",
-          img: `https://placehold.co/240x240/f3f4f6/1f2937?text=${iconText}`,
+          cat: vendor.plan || vendor.status || "Loja",
+          img: "",
         };
       });
     },
@@ -148,13 +224,10 @@ function Index() {
   // Base Data (Flatten infinite pages)
   const dbProducts = useMemo(() => productsData?.pages.flat() || [], [productsData]);
   const dbServices = useMemo(() => servicesData?.pages.flat() || [], [servicesData]);
-  const baseVendors = useMemo(
-    () => (isDev && (!dbVendors || dbVendors.length === 0) ? vendors : (dbVendors ?? [])),
-    [dbVendors, isDev],
-  );
+  const baseVendors = useMemo(() => dbVendors ?? [], [dbVendors]);
 
-  const baseProducts = isDev && dbProducts.length === 0 ? products : dbProducts;
-  const baseServices = isDev && dbServices.length === 0 ? services : dbServices;
+  const baseProducts = dbProducts;
+  const baseServices = dbServices;
 
   const { follows, isLoading: loadingFollows } = useFollows();
   const { user, signInWithGoogle } = useAuth();
@@ -173,7 +246,10 @@ function Index() {
       setTasteProfile((current) => {
         const next = {
           ...current,
-          searches: [normalized, ...current.searches.filter((item) => item !== normalized)].slice(0, 10),
+          searches: [normalized, ...current.searches.filter((item) => item !== normalized)].slice(
+            0,
+            10,
+          ),
         };
         saveTasteProfile(next);
         return next;
@@ -189,18 +265,82 @@ function Index() {
   }, [baseVendors, follows]);
 
   const { data: searchResults } = useGlobalSearch(query);
+  const { data: databaseSearchResults, isLoading: loadingDatabaseSearch } = useQuery({
+    queryKey: ["database-search", q],
+    enabled: q.length > 1,
+    queryFn: async () => {
+      const search = q.replace(/[%_]/g, "");
+      const [productsRes, servicesRes] = await Promise.all([
+        supabase
+          .from("products")
+          .select("*")
+          .or(`name.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
+          .order("created_at", { ascending: false })
+          .limit(80),
+        supabase
+          .from("services")
+          .select("*")
+          .or(`name.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
+          .order("created_at", { ascending: false })
+          .limit(80),
+      ]);
+
+      if (productsRes.error) throw productsRes.error;
+      if (servicesRes.error) throw servicesRes.error;
+
+      return {
+        products: productsRes.data || [],
+        services: servicesRes.data || [],
+      };
+    },
+  });
 
   const visibleProducts = useMemo(() => {
     if (q !== "") {
-      return (searchResults?.products ?? []).map((hit) => ({
+      const algoliaProducts = (searchResults?.products ?? []).map((hit) => ({
         id: hit.objectID,
         store: hit.description || "Vendedora",
-        name: hit.name || "Produto MUSA",
+        name: hit.name || "Publicação",
+        description: hit.description,
         price: hit.price ? `${hit.price.toLocaleString("pt-AO")} AOA` : "Preço sob consulta",
-        rating: "5.0",
+        rating: hit.name ? "Novo" : "",
         category: hit.category || "Geral",
-        img: hit.image_url || "https://placehold.co/400x500/f3f4f6/1f2937?text=MUSA",
+        img: hit.image_url || "",
       }));
+      const databaseProducts = (databaseSearchResults?.products ?? []).map((item: any) => ({
+        ...item,
+        store: item.store || item.vendor_name || "Loja",
+        price:
+          typeof item.price === "number"
+            ? `${item.price.toLocaleString("pt-AO")} AOA`
+            : item.price || "Preço sob consulta",
+        rating: item.rating || "Novo",
+        img:
+          item.img ||
+          item.image_url ||
+          item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
+          "",
+      }));
+      const fuzzyProducts = [...baseProducts]
+        .filter((item: any) => searchScore(item, query) > 0)
+        .map((item: any) => ({
+          ...item,
+          price:
+            typeof item.price === "number"
+              ? `${item.price.toLocaleString("pt-AO")} AOA`
+              : item.price || "Preço sob consulta",
+          rating: item.rating || "Novo",
+          img:
+            item.img ||
+            item.image_url ||
+            item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
+            "",
+        }));
+
+      return dedupeById([...databaseProducts, ...algoliaProducts, ...fuzzyProducts])
+        .map((item: any) => ({ ...item, _score: searchScore(item, query) }))
+        .sort((a: any, b: any) => b._score - a._score)
+        .slice(0, 24);
     }
     const filtered = baseProducts.filter(
       (p: any) => prodCat === "Todos" || prodCat === "Promoções" || p.category === prodCat,
@@ -209,33 +349,92 @@ function Index() {
       (a: any, b: any) =>
         scoreCatalogItem(b, tasteProfile, query) - scoreCatalogItem(a, tasteProfile, query),
     );
-  }, [q, searchResults, prodCat, baseProducts, tasteProfile, query]);
+  }, [q, searchResults, databaseSearchResults, prodCat, baseProducts, tasteProfile, query]);
 
   const visibleServices = useMemo(() => {
     if (q !== "") {
-      return (searchResults?.services ?? []).map((hit) => ({
+      const algoliaServices = (searchResults?.services ?? []).map((hit) => ({
         id: hit.objectID,
-        name: hit.name || "Profissional",
+        name: hit.name || "Publicação",
         title: hit.description || "Serviço",
+        description: hit.description,
         price: hit.price ? `${hit.price.toLocaleString("pt-AO")} AOA` : "Preço sob consulta",
         home: false,
-        rating: "5.0",
+        rating: hit.name ? "Novo" : "",
         category: hit.category || "Geral",
-        img: hit.image_url || "https://placehold.co/400x400/f3f4f6/1f2937?text=MUSA",
+        img: hit.image_url || "",
       }));
+      const databaseServices = (databaseSearchResults?.services ?? []).map((item: any) => ({
+        ...item,
+        title: item.title || item.description || item.name,
+        price:
+          typeof item.price === "number"
+            ? `${item.price.toLocaleString("pt-AO")} AOA`
+            : item.price || "Preço sob consulta",
+        home: Boolean(item.home),
+        rating: item.rating || "Novo",
+        img:
+          item.img ||
+          item.image_url ||
+          item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
+          "",
+      }));
+      const fuzzyServices = [...baseServices]
+        .filter((item: any) => searchScore(item, query) > 0)
+        .map((item: any) => ({
+          ...item,
+          title: item.title || item.description || item.name,
+          price:
+            typeof item.price === "number"
+              ? `${item.price.toLocaleString("pt-AO")} AOA`
+              : item.price || "Preço sob consulta",
+          home: Boolean(item.home),
+          rating: item.rating || "Novo",
+          img:
+            item.img ||
+            item.image_url ||
+            item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
+            "",
+        }));
+
+      return dedupeById([...databaseServices, ...algoliaServices, ...fuzzyServices])
+        .map((item: any) => ({ ...item, _score: searchScore(item, query) }))
+        .sort((a: any, b: any) => b._score - a._score)
+        .slice(0, 24);
     }
     const filtered = baseServices.filter((s: any) => svcCat === "Todos" || s.category === svcCat);
     return [...filtered].sort(
       (a: any, b: any) =>
         scoreCatalogItem(b, tasteProfile, query) - scoreCatalogItem(a, tasteProfile, query),
     );
-  }, [q, searchResults, svcCat, baseServices, tasteProfile, query]);
+  }, [q, searchResults, databaseSearchResults, svcCat, baseServices, tasteProfile, query]);
+
+  const forYouItems = useMemo(() => {
+    const productItems = [...baseProducts].map((item: any) => ({
+      ...item,
+      _kind: "product" as const,
+      _date: new Date(item.created_at || 0).getTime(),
+      _taste: scoreCatalogItem(item, tasteProfile, ""),
+    }));
+    const serviceItems = [...baseServices].map((item: any) => ({
+      ...item,
+      _kind: "service" as const,
+      _date: new Date(item.created_at || 0).getTime(),
+      _taste: scoreCatalogItem(item, tasteProfile, ""),
+    }));
+
+    return [...productItems, ...serviceItems]
+      .sort((a: any, b: any) => b._taste - a._taste || b._date - a._date)
+      .slice(0, 8);
+  }, [baseProducts, baseServices, tasteProfile]);
 
   const preferredLabels = useMemo(
     () =>
       tasteProfile.categories
         .slice(0, 3)
-        .map((category) => tasteOptions.find((option) => option.id === category)?.label || category),
+        .map(
+          (category) => tasteOptions.find((option) => option.id === category)?.label || category,
+        ),
     [tasteProfile.categories],
   );
 
@@ -354,150 +553,201 @@ function Index() {
           ))}
         </div>
 
-        {tab === "produtos" && (
-          <section>
-            <Pills options={productCategories} value={prodCat} onChange={setProdCat} />
-            <SectionTitle title="Selecionado para si" sub="" />
-            {errorProducts ? (
-              <ErrorState message="Não foi possível carregar os produtos. Tenta novamente." />
-            ) : loadingProducts ? (
-              <LoadingGrid />
-            ) : visibleProducts.length === 0 ? (
-              <Empty message="Ainda não há produtos disponíveis nesta categoria." />
-            ) : (
-              <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-                {visibleProducts.map((p: any) => (
-                  <ProductCard
-                    key={p.id}
-                    product={p}
-                    onBuy={() => {
-                      recordInteraction(p);
-                      setDrawerItem({
-                        kind: "product",
-                        img: p.img || p.image_url,
-                        title: p.name,
-                        price: p.price,
-                      });
-                    }}
-                  />
-                ))}
-              </div>
+        {q !== "" ? (
+          <SearchResultsView
+            query={query.trim()}
+            loading={loadingDatabaseSearch}
+            products={visibleProducts}
+            services={visibleServices}
+            onProductClick={(p) => {
+              recordInteraction(p);
+              setDrawerItem({
+                kind: "product",
+                img: p.img || p.image_url,
+                title: p.name,
+                price: p.price,
+              });
+            }}
+            onServiceClick={(s) => {
+              recordInteraction(s);
+              setDrawerItem({
+                kind: "service",
+                img: s.img || s.image_url,
+                title: s.title || s.name,
+                price: s.price,
+              });
+            }}
+          />
+        ) : (
+          <>
+            <ForYouFeed
+              items={forYouItems}
+              onProductClick={(p) => {
+                recordInteraction(p);
+                setDrawerItem({
+                  kind: "product",
+                  img: p.img || p.image_url,
+                  title: p.name,
+                  price: p.price,
+                });
+              }}
+              onServiceClick={(s) => {
+                recordInteraction(s);
+                setDrawerItem({
+                  kind: "service",
+                  img: s.img || s.image_url,
+                  title: s.title || s.name,
+                  price: s.price,
+                });
+              }}
+            />
+
+            {tab === "produtos" && (
+              <section>
+                <Pills options={productCategories} value={prodCat} onChange={setProdCat} />
+                <SectionTitle title="Selecionado para si" sub="" />
+                {errorProducts ? (
+                  <ErrorState message="Não foi possível carregar os produtos. Tenta novamente." />
+                ) : loadingProducts ? (
+                  <LoadingGrid />
+                ) : visibleProducts.length === 0 ? (
+                  <Empty message="Ainda não há produtos disponíveis nesta categoria." />
+                ) : (
+                  <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+                    {visibleProducts.map((p: any) => (
+                      <ProductCard
+                        key={p.id}
+                        product={p}
+                        onBuy={() => {
+                          recordInteraction(p);
+                          setDrawerItem({
+                            kind: "product",
+                            img: p.img || p.image_url,
+                            title: p.name,
+                            price: p.price,
+                          });
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {(hasNextProducts || isFetchingNextProducts) && visibleProducts.length > 0 && (
+                  <div ref={loadMoreRef} className="py-8 text-center">
+                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                )}
+              </section>
             )}
 
-            {(hasNextProducts || isFetchingNextProducts) && visibleProducts.length > 0 && (
-              <div ref={loadMoreRef} className="py-8 text-center">
-                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              </div>
-            )}
-          </section>
-        )}
+            {tab === "servicos" && (
+              <section>
+                <Pills options={serviceCategories} value={svcCat} onChange={setSvcCat} />
+                <SectionTitle title="Profissionais perto de si" sub="" />
+                {errorServices ? (
+                  <ErrorState message="Não foi possível carregar os serviços. Tenta novamente." />
+                ) : loadingServices ? (
+                  <LoadingGrid />
+                ) : visibleServices.length === 0 ? (
+                  <Empty message="Ainda não há serviços disponíveis nesta categoria." />
+                ) : (
+                  <div className="grid gap-3 pt-3.5 lg:grid-cols-2 lg:gap-4">
+                    {visibleServices.map((s: any) => (
+                      <ServiceCard
+                        key={s.id}
+                        service={s}
+                        onBook={() => {
+                          recordInteraction(s);
+                          setDrawerItem({
+                            kind: "service",
+                            img: s.img || s.image_url,
+                            title: s.title || s.name,
+                            price: s.price,
+                          });
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
 
-        {tab === "servicos" && (
-          <section>
-            <Pills options={serviceCategories} value={svcCat} onChange={setSvcCat} />
-            <SectionTitle title="Profissionais perto de si" sub="" />
-            {errorServices ? (
-              <ErrorState message="Não foi possível carregar os serviços. Tenta novamente." />
-            ) : loadingServices ? (
-              <LoadingGrid />
-            ) : visibleServices.length === 0 ? (
-              <Empty message="Ainda não há serviços disponíveis nesta categoria." />
-            ) : (
-              <div className="grid gap-3 pt-3.5 lg:grid-cols-2 lg:gap-4">
-                {visibleServices.map((s: any) => (
-                  <ServiceCard
-                    key={s.id}
-                    service={s}
-                    onBook={() => {
-                      recordInteraction(s);
-                      setDrawerItem({
-                        kind: "service",
-                        img: s.img || s.image_url,
-                        title: s.title || s.name,
-                        price: s.price,
-                      });
-                    }}
-                  />
-                ))}
-              </div>
+                {(hasNextServices || isFetchingNextServices) && visibleServices.length > 0 && (
+                  <div ref={loadMoreRef} className="py-8 text-center">
+                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                )}
+              </section>
             )}
 
-            {(hasNextServices || isFetchingNextServices) && visibleServices.length > 0 && (
-              <div ref={loadMoreRef} className="py-8 text-center">
-                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              </div>
+            {tab === "lojas" && (
+              <section>
+                <SectionTitle title="Marcas verificadas" sub="Empreendedoras da comunidade MUSA" />
+                {errorVendors ? (
+                  <ErrorState message="Não foi possível carregar as marcas. Tenta novamente." />
+                ) : loadingVendors ? (
+                  <LoadingGrid />
+                ) : baseVendors.length === 0 ? (
+                  <Empty message="Ainda não existem lojas registadas." />
+                ) : (
+                  <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+                    {baseVendors.map((v: any) => (
+                      <VendorCard
+                        key={v.id || v.serial_id}
+                        vendor={{ ...v, name: v.name || v.business_name || v.full_name }}
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="mx-auto my-6 h-px max-w-md bg-gradient-to-r from-transparent via-primary to-transparent opacity-35" />
+                <div className="neon-halo ink-panel overflow-hidden rounded-[20px] px-6 py-7 lg:px-10 lg:py-10">
+                  <h3 className="display relative text-[17px] lg:text-2xl">
+                    Tem um negócio de beleza?
+                  </h3>
+                  <p className="relative mt-1.5 max-w-md text-[11.5px] opacity-65 lg:text-sm">
+                    Junte-se à MUSA e venda para milhares de clientes em Luanda.{" "}
+                    <span className="font-semibold opacity-100">Publicação 100% gratuita.</span>
+                  </p>
+                  <button
+                    onClick={() => setSellOpen(true)}
+                    className="relative mt-3.5 rounded-xl bg-primary px-5 py-2.5 text-[11.5px] font-bold text-primary-foreground shadow-neon"
+                  >
+                    Começar a vender — Grátis
+                  </button>
+                </div>
+              </section>
             )}
-          </section>
-        )}
 
-        {tab === "lojas" && (
-          <section>
-            <SectionTitle title="Marcas verificadas" sub="Empreendedoras da comunidade MUSA" />
-            {errorVendors ? (
-              <ErrorState message="Não foi possível carregar as marcas. Tenta novamente." />
-            ) : loadingVendors ? (
-              <LoadingGrid />
-            ) : baseVendors.length === 0 ? (
-              <Empty message="Ainda não existem lojas registadas." />
-            ) : (
-              <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-                {baseVendors.map((v: any) => (
-                  <VendorCard
-                    key={v.id || v.serial_id}
-                    vendor={{ ...v, name: v.name || v.business_name || v.full_name }}
-                  />
-                ))}
-              </div>
+            {tab === "seguidoras" && (
+              <section>
+                <SectionTitle title="Lojas que segues" sub="Acompanha as tuas marcas favoritas" />
+                {!user ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <p className="mb-4 text-[13px] font-medium text-muted-foreground">
+                      Inicia sessão para ver as lojas que segues.
+                    </p>
+                    <button
+                      onClick={() => signInWithGoogle()}
+                      className="rounded-xl bg-primary px-6 py-2.5 text-[12px] font-bold text-primary-foreground shadow-neon"
+                    >
+                      Iniciar Sessão
+                    </button>
+                  </div>
+                ) : loadingVendors || loadingFollows ? (
+                  <LoadingGrid />
+                ) : followedVendors.length === 0 ? (
+                  <Empty message="Ainda não segues nenhuma loja." />
+                ) : (
+                  <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+                    {followedVendors.map((v: any) => (
+                      <VendorCard
+                        key={v.id || v.serial_id}
+                        vendor={{ ...v, name: v.name || v.business_name || v.full_name }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
             )}
-            <div className="mx-auto my-6 h-px max-w-md bg-gradient-to-r from-transparent via-primary to-transparent opacity-35" />
-            <div className="neon-halo ink-panel overflow-hidden rounded-[20px] px-6 py-7 lg:px-10 lg:py-10">
-              <h3 className="display relative text-[17px] lg:text-2xl">
-                Tem um negócio de beleza?
-              </h3>
-              <p className="relative mt-1.5 max-w-md text-[11.5px] opacity-65 lg:text-sm">
-                Junte-se à MUSA e venda para milhares de clientes em Luanda.{" "}
-                <span className="font-semibold opacity-100">Publicação 100% gratuita.</span>
-              </p>
-              <button
-                onClick={() => setSellOpen(true)}
-                className="relative mt-3.5 rounded-xl bg-primary px-5 py-2.5 text-[11.5px] font-bold text-primary-foreground shadow-neon"
-              >
-                Começar a vender — Grátis
-              </button>
-            </div>
-          </section>
-        )}
-
-        {tab === "seguidoras" && (
-          <section>
-            <SectionTitle title="Lojas que segues" sub="Acompanha as tuas marcas favoritas" />
-            {!user ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="mb-4 text-[13px] font-medium text-muted-foreground">
-                  Inicia sessão para ver as lojas que segues.
-                </p>
-                <button
-                  onClick={() => signInWithGoogle()}
-                  className="rounded-xl bg-primary px-6 py-2.5 text-[12px] font-bold text-primary-foreground shadow-neon"
-                >
-                  Iniciar Sessão
-                </button>
-              </div>
-            ) : loadingVendors || loadingFollows ? (
-              <LoadingGrid />
-            ) : followedVendors.length === 0 ? (
-              <Empty message="Ainda não segues nenhuma loja." />
-            ) : (
-              <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-                {followedVendors.map((v: any) => (
-                  <VendorCard
-                    key={v.id || v.serial_id}
-                    vendor={{ ...v, name: v.name || v.business_name || v.full_name }}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+          </>
         )}
       </main>
 
@@ -545,13 +795,23 @@ function Index() {
                 Contacto
               </p>
               <p className="mb-2 text-[12.5px] text-muted-foreground">Luanda, Angola</p>
-              <p className="mb-2 text-[12.5px] text-muted-foreground">musa.luanda@gmail.com</p>
-              <p className="mb-2 text-[12.5px] text-muted-foreground">+244 900 000 000</p>
+              <a
+                href="mailto:romacristiano77@gmail.com"
+                className="mb-2 block text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                romacristiano77@gmail.com
+              </a>
+              <a
+                href="tel:+244946419129"
+                className="mb-2 block text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                +244 946 419 129
+              </a>
             </div>
           </div>
           <div className="mt-8 flex flex-col items-center gap-2 border-t border-border-soft pt-6 sm:flex-row sm:justify-between">
             <p className="text-[10.5px] text-muted-foreground">
-              © 2025 MUSA · Mercado de beleza & moda · Luanda, Angola
+              © MUSA · Mercado de beleza & moda · Luanda, Angola
             </p>
             <p className="text-[10.5px] text-muted-foreground">
               Feito com ❤️ para as mulheres angolanas
@@ -579,6 +839,143 @@ function Index() {
   );
 }
 
+function SearchResultsView({
+  query,
+  loading,
+  products,
+  services,
+  onProductClick,
+  onServiceClick,
+}: {
+  query: string;
+  loading: boolean;
+  products: any[];
+  services: any[];
+  onProductClick: (product: any) => void;
+  onServiceClick: (service: any) => void;
+}) {
+  const hasResults = products.length > 0 || services.length > 0;
+
+  return (
+    <section className="pt-5">
+      <SectionTitle
+        title={`Resultados para "${query}"`}
+        sub="Produtos e serviços encontrados na MUSA"
+      />
+      {loading && !hasResults ? (
+        <LoadingGrid />
+      ) : !hasResults ? (
+        <Empty message={`Não foi encontrado nenhum resultado para "${query}".`} />
+      ) : (
+        <div className="space-y-7">
+          {products.length > 0 && (
+            <div>
+              <h3 className="pt-3 text-sm font-black">Produtos</h3>
+              <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+                {products.map((product: any) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onBuy={() => onProductClick(product)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {services.length > 0 && (
+            <div>
+              <h3 className="pt-3 text-sm font-black">Serviços</h3>
+              <div className="grid gap-3 pt-3.5 lg:grid-cols-2 lg:gap-4">
+                {services.map((service: any) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    onBook={() => onServiceClick(service)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ForYouFeed({
+  items,
+  onProductClick,
+  onServiceClick,
+}: {
+  items: any[];
+  onProductClick: (product: any) => void;
+  onServiceClick: (service: any) => void;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <section id="for-you-feed" className="pt-5">
+      <div className="flex items-end justify-between gap-3">
+        <SectionTitle title="Para você" sub="Últimas publicações alinhadas ao teu gosto" />
+        <span className="mb-1 hidden rounded-full bg-accent px-3 py-1 text-[10px] font-bold text-accent-foreground sm:inline-flex">
+          Feed
+        </span>
+      </div>
+      <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pt-3.5 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
+        {items.map((item: any) =>
+          item._kind === "product" ? (
+            <div key={`feed-product-${item.id}`} className="w-[168px] shrink-0 lg:w-auto">
+              <ProductCard
+                product={{
+                  ...item,
+                  price:
+                    typeof item.price === "number"
+                      ? `${item.price.toLocaleString("pt-AO")} AOA`
+                      : item.price || "Preço sob consulta",
+                  rating: item.rating || "Novo",
+                  store: item.store || item.vendor_name || "Loja",
+                  img:
+                    item.img ||
+                    item.image_url ||
+                    item.media_urls?.find((url: string) =>
+                      /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url),
+                    ) ||
+                    "",
+                }}
+                onBuy={() => onProductClick(item)}
+              />
+            </div>
+          ) : (
+            <div key={`feed-service-${item.id}`} className="w-[280px] shrink-0 lg:w-auto">
+              <ServiceCard
+                service={{
+                  ...item,
+                  title: item.title || item.description || item.name,
+                  price:
+                    typeof item.price === "number"
+                      ? `${item.price.toLocaleString("pt-AO")} AOA`
+                      : item.price || "Preço sob consulta",
+                  home: Boolean(item.home),
+                  rating: item.rating || "Novo",
+                  img:
+                    item.img ||
+                    item.image_url ||
+                    item.media_urls?.find((url: string) =>
+                      /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url),
+                    ) ||
+                    "",
+                }}
+                onBook={() => onServiceClick(item)}
+              />
+            </div>
+          ),
+        )}
+      </div>
+    </section>
+  );
+}
+
 function HeroExperience({
   personalized,
   preferredLabels,
@@ -597,16 +994,12 @@ function HeroExperience({
       <div className="relative grid min-h-[360px] gap-8 px-5 py-7 sm:px-8 lg:grid-cols-[1.08fr_0.92fr] lg:px-10 lg:py-10">
         <div className="flex max-w-xl flex-col justify-between">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase text-white/82 backdrop-blur-xl">
-              <Sparkles className="size-3.5 text-primary" />
-              Social commerce de beleza em Luanda
-            </div>
             <h1 className="display max-w-[11ch] text-[3rem] leading-[0.92] text-white sm:text-[4.4rem] lg:text-[5.3rem]">
               MUSA
             </h1>
             <p className="mt-4 max-w-md text-sm leading-6 text-white/76 lg:text-[15px]">
-              Uma vitrine chique para descobrir laces, moda, make, unhas, serviços e criadoras
-              com um feed que aprende com os teus gostos.
+              Uma vitrine chique para descobrir laces, moda, make, unhas, serviços e criadoras com
+              um feed que aprende com os teus gostos.
             </p>
           </div>
           <div className="mt-7 flex flex-wrap gap-2.5">
@@ -638,8 +1031,14 @@ function HeroExperience({
                 </div>
                 <p className="text-sm font-bold">Vestidos, glow e serviços que combinam contigo.</p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {(preferredLabels.length ? preferredLabels : ["Moda elegante", "Glow & make"]).map((label) => (
-                    <span key={label} className="rounded-full bg-white/16 px-2.5 py-1 text-[10px] font-semibold backdrop-blur">
+                  {(preferredLabels.length
+                    ? preferredLabels
+                    : ["Moda elegante", "Glow & make"]
+                  ).map((label) => (
+                    <span
+                      key={label}
+                      className="rounded-full bg-white/16 px-2.5 py-1 text-[10px] font-semibold backdrop-blur"
+                    >
                       {label}
                     </span>
                   ))}
@@ -727,11 +1126,14 @@ function TasteOnboarding({
             </p>
             <h2 className="display text-3xl leading-none text-foreground">Escolhe o teu mood</h2>
             <p className="mt-2 text-sm leading-5 text-muted-foreground">
-              Toca nas opções que combinam contigo. A MUSA usa isto para ordenar produtos,
-              serviços e marcas no teu “Para si”.
+              Toca nas opções que combinam contigo. A MUSA usa isto para ordenar produtos, serviços
+              e marcas no teu “Para si”.
             </p>
           </div>
-          <button onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary">
+          <button
+            onClick={onClose}
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary"
+          >
             <X className="size-4" />
           </button>
         </div>
@@ -754,7 +1156,12 @@ function TasteOnboarding({
                   <span className="text-[12px] font-bold leading-tight">{option.label}</span>
                   {active && <Check className="size-4 shrink-0" />}
                 </span>
-                <span className={cn("mt-2 block text-[10px]", active ? "text-white/78" : "text-muted-foreground")}>
+                <span
+                  className={cn(
+                    "mt-2 block text-[10px]",
+                    active ? "text-white/78" : "text-muted-foreground",
+                  )}
+                >
                   {option.id}
                 </span>
               </button>

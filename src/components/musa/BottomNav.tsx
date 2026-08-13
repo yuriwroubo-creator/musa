@@ -1,4 +1,4 @@
-import { Home, Search, PlusSquare, Heart, User } from "lucide-react";
+import { Home, Sparkles, PlusSquare, Heart, User } from "lucide-react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ interface BottomNavProps {
 
 const navItems = [
   { icon: Home, label: "Início", path: "/" },
-  { icon: Search, label: "Categorias", path: null, action: "search" },
+  { icon: Sparkles, label: "Para você", path: "/", action: "feed" },
   { icon: PlusSquare, label: "Publicar", path: null, action: "sell" },
   { icon: Heart, label: "Favoritos", path: "/favoritos", requiresAuth: true },
   { icon: User, label: "Perfil", path: "/perfil", requiresAuth: true },
@@ -31,6 +31,13 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
       onSearchClick?.();
       return;
     }
+    if (item.action === "feed") {
+      navigate({ to: "/" });
+      window.setTimeout(() => {
+        document.getElementById("for-you-feed")?.scrollIntoView({ behavior: "smooth" });
+      }, 80);
+      return;
+    }
     if (item.requiresAuth && !user) {
       signInWithGoogle();
       return;
@@ -45,7 +52,8 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
       <div className="mx-auto flex max-w-md items-center justify-around px-2 py-2 pb-safe">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = item.path ? currentPath === item.path : false;
+          const isActive =
+            item.action === "feed" ? false : item.path ? currentPath === item.path : false;
           const isPublish = item.action === "sell";
 
           return (

@@ -16,6 +16,8 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
 
   const isFavorite = checkIsFavorite(product.id);
   const audioUrl = product.media_urls?.find((url) => url.match(/\.(mp3|wav|aac|ogg)$/i));
+  const imageUrl =
+    product.img || product.media_urls?.find((u) => u.match(/\.(jpg|jpeg|png|webp)$/i));
   const isThisAudioPlaying = currentTrack === audioUrl && isPlaying;
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
@@ -30,16 +32,18 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
   return (
     <article className="group luxe-card animate-rise flex flex-col overflow-hidden rounded-[22px] transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
       <div className="relative aspect-[1/1.18] w-full overflow-hidden bg-muted">
-        <img
-          src={
-            product.img ||
-            product.media_urls?.find((u) => u.match(/\.(jpg|jpeg|png|webp)$/i)) ||
-            "https://placehold.co/400x500/f3f4f6/1f2937?text=MUSA"
-          }
-          alt={product.name}
-          loading="lazy"
-          className="size-full object-cover transition-transform duration-700 group-hover:scale-[1.07]"
-        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={product.name}
+            loading="lazy"
+            className="size-full object-cover transition-transform duration-700 group-hover:scale-[1.07]"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center bg-secondary text-[11px] font-black uppercase tracking-[0.08em] text-muted-foreground">
+            MUSA
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/48 via-transparent to-black/14 opacity-80" />
         {audioUrl && (
           <button
@@ -103,7 +107,9 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
         <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
           {product.store}
         </p>
-        <h3 className="min-h-[36px] text-[13px] font-bold leading-snug lg:text-sm">{product.name}</h3>
+        <h3 className="min-h-[36px] text-[13px] font-bold leading-snug lg:text-sm">
+          {product.name}
+        </h3>
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <p className="font-mono text-[12.5px] font-bold text-primary">{product.price}</p>
           <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold text-accent-foreground">
@@ -126,6 +132,8 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
   const { signInWithGoogle, user } = useAuth();
 
   const isFavorite = checkIsFavorite(service.id);
+  const imageUrl =
+    service.img || service.media_urls?.find((u) => u.match(/\.(jpg|jpeg|png|webp)$/i));
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -139,12 +147,18 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
   return (
     <article className="luxe-card animate-rise flex items-center gap-3 rounded-[22px] p-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
       <div className="relative shrink-0">
-        <img
-          src={service.img}
-          alt={service.name}
-          loading="lazy"
-          className="size-[78px] rounded-[16px] object-cover lg:size-[92px]"
-        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={service.name}
+            loading="lazy"
+            className="size-[78px] rounded-[16px] object-cover lg:size-[92px]"
+          />
+        ) : (
+          <div className="flex size-[78px] items-center justify-center rounded-[16px] bg-secondary text-[10px] font-black uppercase tracking-[0.08em] text-muted-foreground lg:size-[92px]">
+            MUSA
+          </div>
+        )}
         <span className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-card bg-primary">
           <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />
         </span>
@@ -207,7 +221,6 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
   const { data: followerCount = 0 } = useQuery({
     queryKey: ["vendor_followers", vendor.id],
     queryFn: async () => {
-      if (vendor.id.startsWith("v")) return 0; // Fallback for local dev mocks
       const { count, error } = await supabase
         .from("follows")
         .select("*", { count: "exact", head: true })
@@ -232,12 +245,18 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
   return (
     <article className="luxe-card animate-rise flex flex-col items-center gap-2 rounded-[22px] px-3 py-5 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
       <div className="relative">
-        <img
-          src={vendor.img}
-          alt={vendor.name}
-          loading="lazy"
-          className="size-[64px] rounded-full border-[3px] border-accent object-cover shadow-soft lg:size-[72px]"
-        />
+        {vendor.img ? (
+          <img
+            src={vendor.img}
+            alt={vendor.name}
+            loading="lazy"
+            className="size-[64px] rounded-full border-[3px] border-accent object-cover shadow-soft lg:size-[72px]"
+          />
+        ) : (
+          <div className="flex size-[64px] items-center justify-center rounded-full border-[3px] border-accent bg-secondary text-[10px] font-black uppercase tracking-[0.08em] text-muted-foreground shadow-soft lg:size-[72px]">
+            MUSA
+          </div>
+        )}
         <span className="absolute -right-0.5 -bottom-0.5 flex size-5 items-center justify-center rounded-full border-2 border-card bg-primary">
           <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />
         </span>

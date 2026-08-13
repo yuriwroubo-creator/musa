@@ -60,7 +60,7 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
 
   const code = useMemo(() => `MUSA-${Math.floor(10000 + Math.random() * 89999)}`, []);
 
-  const step1Valid = shopName.trim() && ownerName.trim() && phone.trim() && turnstileToken;
+  const step1Valid = shopName.trim() && ownerName.trim();
   const step2Valid = productName.trim() && productPrice.trim() && productCategory;
 
   const mutation = useMutation({

@@ -31,18 +31,21 @@ function getServerSupabase(token?: string) {
   });
 }
 
-function isSchemaCacheColumnError(error: { code?: string; message?: string; details?: string }, column: string) {
+function isSchemaCacheColumnError(
+  error: { code?: string; message?: string; details?: string },
+  column: string,
+) {
   const text = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
   return (
     error.code === "42703" ||
     text.includes(`'${column.toLowerCase()}' column`) ||
-    text.includes(`\"${column.toLowerCase()}\" column`) ||
+    text.includes(`"${column.toLowerCase()}" column`) ||
     text.includes(column.toLowerCase())
   );
 }
 
 function isOptionalVendorColumnError(error: { code?: string; message?: string; details?: string }) {
-  return ["business_name", "full_name", "phone"].some((column) =>
+  return ["business_name", "full_name", "phone", "user_id"].some((column) =>
     isSchemaCacheColumnError(error, column),
   );
 }
@@ -108,16 +111,30 @@ export const publishItemFn = createServerFn({ method: "POST" })
       .eq("user_id", authenticatedUserId)
       .maybeSingle();
 
-    if (checkVendorError) {
-      console.error("[PUBLISH] Erro ao verificar loja existente:", checkVendorError);
+    let vendorLookupError = checkVendorError;
+    let vendorByLegacyId = null;
+
+    if (checkVendorError && isSchemaCacheColumnError(checkVendorError, "user_id")) {
+      const legacyRes = await supabase
+        .from("vendor_subscriptions")
+        .select("id")
+        .eq("vendor_id", authenticatedUserId)
+        .maybeSingle();
+
+      vendorByLegacyId = legacyRes.data;
+      vendorLookupError = legacyRes.error;
+    }
+
+    if (vendorLookupError) {
+      console.error("[PUBLISH] Erro ao verificar loja existente:", vendorLookupError);
       return {
         success: false,
-        error: `Falha na Base de Dados ao procurar a loja: ${checkVendorError.message}`,
+        error: `Falha na Base de Dados ao procurar a loja: ${vendorLookupError.message}`,
       };
     }
 
-    if (existingVendor) {
-      vendorId = existingVendor.id;
+    if (existingVendor || vendorByLegacyId) {
+      vendorId = (existingVendor || vendorByLegacyId)!.id;
     } else {
       console.log("[PUBLISH] Loja não encontrada, a criar nova subscrição...");
       let newVendor = null;
@@ -127,6 +144,13 @@ export const publishItemFn = createServerFn({ method: "POST" })
         const baseVendorPayload = {
           serial_id,
           user_id: authenticatedUserId,
+          vendor_id: authenticatedUserId,
+          plan: "basic",
+          status: "active",
+        };
+        const legacyVendorPayload = {
+          serial_id,
+          vendor_id: authenticatedUserId,
           plan: "basic",
           status: "active",
         };
@@ -148,6 +172,15 @@ export const publishItemFn = createServerFn({ method: "POST" })
           },
           {
             ...baseVendorPayload,
+          },
+          {
+            ...legacyVendorPayload,
+            business_name: data.shopName,
+            full_name: data.ownerName,
+            ...(phone ? { phone } : {}),
+          },
+          {
+            ...legacyVendorPayload,
           },
         ];
 

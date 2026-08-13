@@ -16,10 +16,41 @@ interface MediaUploaderProps {
   accept?: string;
 }
 
+const mimeByExtension: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  heic: "image/heic",
+  heif: "image/heif",
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  m4v: "video/x-m4v",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  aac: "audio/aac",
+  m4a: "audio/mp4",
+};
+
+function getFileExtension(file: File) {
+  return file.name.split(".").pop()?.toLowerCase() || "";
+}
+
+function getUploadContentType(file: File) {
+  return file.type || mimeByExtension[getFileExtension(file)] || "application/octet-stream";
+}
+
+function getSafeFileName(file: File) {
+  const extension = getFileExtension(file);
+  const baseName = file.name || `musa-upload.${extension || "bin"}`;
+  const safeName = baseName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  return safeName.includes(".") ? safeName : `${safeName}.${extension || "bin"}`;
+}
+
 export const MediaUploader: React.FC<MediaUploaderProps> = ({
   onUploadComplete,
   maxFiles = 5,
-  accept = "image/*,video/*,audio/*,.mp3,.wav,.aac",
+  accept = "image/*,video/*,audio/*,.jpg,.jpeg,.png,.webp,.heic,.heif,.mp4,.mov,.m4v,.mp3,.wav,.aac,.m4a",
 }) => {
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
@@ -51,13 +82,17 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       return;
     }
 
-    const validFiles = newFiles.filter(
-      (file) =>
+    const validFiles = newFiles.filter((file) => {
+      const extensionSupported = file.name.match(
+        /\.(jpg|jpeg|png|webp|heic|heif|mp4|mov|m4v|mp3|wav|aac|m4a)$/i,
+      );
+      return (
         file.type.startsWith("image/") ||
         file.type.startsWith("video/") ||
         file.type.startsWith("audio/") ||
-        file.name.match(/\.(mp3|wav|aac)$/i),
-    );
+        extensionSupported
+      );
+    });
 
     if (validFiles.length !== newFiles.length) {
       toast.error("Apenas imagens, vídeos e áudios são suportados.");
@@ -71,7 +106,8 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       type:
         file.type.split("/")[0] === "audio" || file.name.match(/\.(mp3|wav|aac)$/i)
           ? "audio"
-          : file.type.split("/")[0] || "unknown",
+          : file.type.split("/")[0] ||
+            (file.name.match(/\.(heic|heif|jpg|jpeg|png|webp)$/i) ? "image" : "video"),
     }));
     setPreviews((prev) => [...prev, ...newPreviews]);
   };
@@ -87,6 +123,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       processFiles(Array.from(e.target.files));
+      e.target.value = "";
     }
   };
 
@@ -114,14 +151,16 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
 
       for (const file of files) {
         const timestamp = Date.now();
-        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-        const path = `${user.id}/${timestamp}_${safeName}`;
+        const random = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+        const safeName = getSafeFileName(file);
+        const path = `${user.id}/${timestamp}_${random}_${safeName}`;
 
         const { error: uploadError } = await supabase.storage
           .from(MUSA_MEDIA_BUCKET)
           .upload(path, file, {
             cacheControl: "3600",
-            upsert: false,
+            contentType: getUploadContentType(file),
+            upsert: true,
           });
 
         if (uploadError) {
@@ -146,7 +185,9 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       setPreviews([]);
     } catch (error: any) {
       console.error("Upload error:", error);
-      toast.error("Erro ao fazer upload dos ficheiros. Tenta novamente.");
+      toast.error("Erro ao fazer upload dos ficheiros.", {
+        description: error?.message || "Tenta novamente com outro ficheiro.",
+      });
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -157,11 +198,10 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     <div className="w-full space-y-4">
       {/* Upload Zone */}
       {files.length < maxFiles && (
-        <div
+        <label
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
           className={`relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group
             ${
               isDragging
@@ -188,11 +228,20 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
             type="file"
             accept={accept}
             multiple
-            className="hidden"
+            capture={undefined}
+            className="sr-only"
             onChange={handleFileChange}
             disabled={isUploading}
           />
-        </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="relative mt-4 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white shadow-neon disabled:opacity-60"
+          >
+            Selecionar ficheiros
+          </button>
+        </label>
       )}
 
       {/* Previews Grid */}

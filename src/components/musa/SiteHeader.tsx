@@ -1,14 +1,4 @@
-import {
-  Menu,
-  Search,
-  ShoppingBag,
-  Heart,
-  User,
-  Sun,
-  Moon,
-  MapPin,
-  LayoutDashboard,
-} from "lucide-react";
+import { Menu, Search, ShoppingBag, Heart, User, Sun, Moon, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, Suspense, lazy } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -126,12 +116,12 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
               <Heart className="size-5" strokeWidth={1.6} />
             </button>
 
-            {/* Dashboard / Profile */}
+            {/* Profile */}
             {user ? (
               <button
-                onClick={() => navigate({ to: "/dashboard" })}
+                onClick={() => navigate({ to: "/perfil" })}
                 className="hidden size-9 items-center justify-center overflow-hidden rounded-full border-2 border-primary/40 shadow-sm transition-all hover:border-primary lg:flex"
-                aria-label="Dashboard"
+                aria-label="Perfil"
               >
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={initials} className="size-full object-cover" />
@@ -200,13 +190,13 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
                 <>
                   <button
                     onClick={() => {
-                      navigate({ to: "/dashboard" });
+                      navigate({ to: "/perfil" });
                       setMenuOpen(false);
                     }}
                     className="flex flex-col items-center gap-1 rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
                   >
-                    <LayoutDashboard className="size-4" />
-                    Dashboard
+                    <User className="size-4" />
+                    Perfil
                   </button>
                   <button
                     onClick={() => {
@@ -217,16 +207,6 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
                   >
                     <Heart className="size-4" />
                     Favoritos
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigate({ to: "/perfil" });
-                      setMenuOpen(false);
-                    }}
-                    className="flex flex-col items-center gap-1 rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
-                  >
-                    <User className="size-4" />
-                    Perfil
                   </button>
                 </>
               ) : (

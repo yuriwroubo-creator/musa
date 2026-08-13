@@ -5,7 +5,6 @@ import {
   ALGOLIA_SEARCH_KEY,
   ALGOLIA_SERVICES_INDEX,
 } from "@/lib/config";
-import { products, services } from "@/lib/musa-data";
 
 export const searchClient = liteClient(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 
@@ -24,45 +23,8 @@ export interface GlobalSearchResults {
   services: SearchHit[];
 }
 
-function normalize(value: string | undefined | null) {
-  return (value || "").trim().toLowerCase();
-}
-
-function fallbackSearch(query: string): GlobalSearchResults {
-  const q = normalize(query);
-  if (!q) return { products: [], services: [] };
-
-  const productHits = products
-    .filter((item) => {
-      const haystack = [item.name, item.store, item.category, item.price].join(" ").toLowerCase();
-      return haystack.includes(q);
-    })
-    .map((item) => ({
-      objectID: item.id,
-      name: item.name,
-      description: item.store,
-      price: Number.parseFloat(item.price.replace(/[^\d.]/g, "")) || undefined,
-      image_url: item.img,
-      category: item.category,
-      type: "product" as const,
-    }));
-
-  const serviceHits = services
-    .filter((item) => {
-      const haystack = [item.name, item.title, item.category, item.price].join(" ").toLowerCase();
-      return haystack.includes(q);
-    })
-    .map((item) => ({
-      objectID: item.id,
-      name: item.name,
-      description: item.title,
-      price: Number.parseFloat(item.price.replace(/[^\d.]/g, "")) || undefined,
-      image_url: item.img,
-      category: item.category,
-      type: "service" as const,
-    }));
-
-  return { products: productHits, services: serviceHits };
+function emptySearchResults(): GlobalSearchResults {
+  return { products: [], services: [] };
 }
 
 /** Pesquisa global nos índices de produtos e serviços. */
@@ -88,8 +50,8 @@ export async function globalSearch(query: string, hitsPerPage = 8): Promise<Glob
       return { products: productsHits, services: servicesHits };
     }
   } catch (error) {
-    console.warn("[Search] Algolia unavailable, using local fallback:", error);
+    console.warn("[Search] Algolia unavailable:", error);
   }
 
-  return fallbackSearch(query);
+  return emptySearchResults();
 }
