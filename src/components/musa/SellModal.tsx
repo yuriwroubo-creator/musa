@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 import { X, Check, ShieldCheck, MessageCircle, Store, Package, Tag, FileText, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { publishItemFn } from "@/lib/publish.functions";
+import { checkContent } from "@/lib/moderation/ai-check";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const steps = [
   "Passo 1 · Dados da Loja",
@@ -20,8 +26,9 @@ const categories = [
 ];
 
 export function SellModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { user, session, signInWithGoogle } = useAuth();
   const [step, setStep] = useState(1);
-  const [robot, setRobot] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [shopName, setShopName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [phone, setPhone] = useState("");
@@ -37,16 +44,66 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
     [],
   );
 
-  const step1Valid = shopName.trim() && ownerName.trim() && phone.trim() && robot;
+  const step1Valid = shopName.trim() && ownerName.trim() && phone.trim() && turnstileToken;
   const step2Valid = productName.trim() && productPrice.trim() && productCategory;
 
-  const whatsappMsg = encodeURIComponent(
-    `Olá MUSA! 👋 Quero publicar na plataforma.\n\nLoja: ${shopName}\nTitular: ${ownerName}\nTelefone: ${phone}\n\nProduto/Serviço: ${productName}\nPreço: ${productPrice} AOA\nCategoria: ${productCategory}\nDescrição: ${productDesc}\n\nCódigo: ${code}`,
-  );
+  const mutation = useMutation({
+    mutationFn: async () => {
+      // 1. AI Moderation Check
+      const aiResult = await checkContent({
+        data: {
+          title: productName,
+          description: productDesc,
+        },
+      });
+
+      if (!aiResult.safe) {
+        throw new Error(`O conteúdo foi bloqueado pela nossa moderação automática (Categoria: ${aiResult.category || "Inadequado"}). Por favor, revê o texto e tenta novamente.`);
+      }
+
+      // 2. Publish Item Directly
+      const res = await publishItemFn({
+        data: {
+          shopName,
+          ownerName,
+          phone,
+          productName,
+          productPrice,
+          productCategory,
+          productDesc,
+          productType,
+          turnstileToken,
+          flagged_for_review: aiResult.flagged_for_review,
+          access_token: session?.access_token || "",
+          user_id: user?.id || "",
+        },
+      });
+      if (!res.success) throw new Error(res.error || "Erro ao publicar.");
+      return res;
+    },
+    onSuccess: () => {
+      toast.success("Pedido enviado com sucesso! ✅", {
+        description: "A nossa equipa vai rever a publicação em breve.",
+      });
+      handleClose();
+    },
+    onError: (error: any) => {
+      // If it's an AI block error, we show it clearly
+      if (error.message.includes("bloqueado pela nossa moderação")) {
+        toast.error("Submissão Rejeitada", {
+          description: error.message,
+        });
+      } else {
+        toast.error("Ocorreu um erro.", {
+          description: "Não foi possível enviar o pedido de publicação.",
+        });
+      }
+    },
+  });
 
   const handleClose = () => {
     setStep(1);
-    setRobot(false);
+    setTurnstileToken("");
     setShopName("");
     setOwnerName("");
     setPhone("");
@@ -86,23 +143,40 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
         </div>
 
         {/* Progress bar */}
-        <div className="flex gap-1.5 px-5 pt-3.5">
-          {[1, 2, 3].map((n) => (
-            <span
-              key={n}
-              className={cn(
-                "h-[3px] flex-1 rounded-full transition-all duration-500",
-                n <= step ? "bg-primary" : "bg-border",
-              )}
-            />
-          ))}
-        </div>
+        {user && (
+          <div className="flex gap-1.5 px-5 pt-3.5">
+            {[1, 2, 3].map((n) => (
+              <span
+                key={n}
+                className={cn(
+                  "h-[3px] flex-1 rounded-full transition-all duration-500",
+                  n <= step ? "bg-primary" : "bg-border",
+                )}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="px-5 pt-4 pb-28">
           <p className="pb-4 text-xs text-muted-foreground">{steps[step - 1]}</p>
 
-          {/* Step 1: Shop Info */}
-          {step === 1 && (
+          {!user ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                <Store className="size-8" />
+              </div>
+              <h3 className="mb-2 text-xl font-bold">Inicia Sessão para Vender</h3>
+              <p className="mb-8 text-sm text-muted-foreground">
+                Para publicares na MUSA precisas de associar a tua conta. O registo é grátis.
+              </p>
+              <button
+                onClick={signInWithGoogle}
+                className="w-full rounded-xl bg-primary px-4 py-3.5 text-[13px] font-bold text-primary-foreground shadow-neon transition-all hover:bg-primary/90"
+              >
+                Continuar com a Google
+              </button>
+            </div>
+          ) : step === 1 ? (
             <div className="flex flex-col gap-0.5">
               <div className="mb-5 rounded-2xl border border-border-soft bg-card p-4">
                 <div className="flex items-center gap-2.5">
@@ -131,115 +205,58 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
                 onChange={setOwnerName}
               />
               <Field
-                label="Número de WhatsApp"
-                placeholder="+244 9__ ___ ___"
-                type="tel"
+                label="WhatsApp para Clientes"
+                placeholder="Ex: 923 000 000"
                 value={phone}
                 onChange={setPhone}
               />
 
-              <button
-                onClick={() => setRobot((v) => !v)}
-                aria-pressed={robot}
-                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-3.5 text-left"
-              >
-                <span
-                  className={cn(
-                    "flex size-[22px] shrink-0 items-center justify-center rounded-[5px] border transition-colors",
-                    robot ? "border-primary bg-primary" : "border-muted-soft",
-                  )}
-                >
-                  <Check
-                    className={cn(
-                      "size-3 text-primary-foreground transition-opacity",
-                      robot ? "opacity-100" : "opacity-0",
-                    )}
-                    strokeWidth={3}
-                  />
-                </span>
-                <span className="flex-1">
-                  <span className="block text-[12.5px] font-semibold">
-                    Confirmo que não sou um robô
-                  </span>
-                  <span className="block text-[9.5px] text-muted-soft">
-                    MUSA Verify · protegido
-                  </span>
-                </span>
-                <ShieldCheck className="size-6 text-muted-soft" strokeWidth={1.4} />
-              </button>
-
-              <Nav>
-                <Primary disabled={!step1Valid} onClick={() => setStep(2)}>
-                  Continuar →
-                </Primary>
-              </Nav>
+              <div className="mt-2">
+                <TurnstileWidget onVerify={setTurnstileToken} action="vendor_form" />
+              </div>
             </div>
-          )}
-
-          {/* Step 2: Product/Service Details */}
-          {step === 2 && (
+          ) : step === 2 ? (
             <div className="flex flex-col gap-0.5">
-              {/* Type selector */}
               <div className="mb-4 flex gap-2 rounded-xl border border-border bg-card p-1">
-                {(["produto", "servico"] as const).map((t) => (
+                {(['produto', 'servico'] as const).map((type) => (
                   <button
-                    key={t}
-                    onClick={() => setProductType(t)}
+                    key={type}
+                    onClick={() => setProductType(type)}
                     className={cn(
-                      "flex flex-1 items-center justify-center gap-1.5 rounded-[10px] py-2.5 text-[12px] font-semibold transition-all",
-                      productType === t
-                        ? "bg-primary text-primary-foreground shadow-neon"
-                        : "text-muted-foreground",
+                      'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-[12px] font-bold capitalize transition-all',
+                      productType === type
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-accent/50',
                     )}
                   >
-                    {t === "produto" ? (
-                      <Package className="size-3.5" />
-                    ) : (
-                      <Tag className="size-3.5" />
-                    )}
-                    {t === "produto" ? "Produto" : "Serviço"}
+                    {type === 'produto' ? <Package className="size-3.5" /> : <FileText className="size-3.5" />}
+                    {type}
                   </button>
                 ))}
               </div>
 
               <Field
-                label={productType === "produto" ? "Nome do Produto" : "Nome do Serviço"}
-                placeholder={
-                  productType === "produto"
-                    ? "Ex: Vestido Ankara Midi"
-                    : "Ex: Tranças Boho + Extensões"
-                }
+                label={`Nome do ${productType === 'produto' ? 'Produto' : 'Serviço'}`}
+                placeholder="Ex: Limpeza de Pele Profunda"
                 value={productName}
                 onChange={setProductName}
               />
-
-              <Field
-                label="Preço (AOA)"
-                placeholder="Ex: 25000"
-                type="number"
-                value={productPrice}
-                onChange={setProductPrice}
-              />
-
-              {/* Category dropdown */}
-              <div className="mb-4">
-                <label className="mb-1.5 block text-[11px] font-bold tracking-[0.04em] text-muted-foreground uppercase">
+              <div className="relative mb-5">
+                <label className="mb-1.5 block px-1 text-[11.5px] font-bold text-muted-foreground">
                   Categoria
                 </label>
-                <div className="relative">
-                  <button
-                    onClick={() => setCatOpen((v) => !v)}
-                    className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-3.5 py-3 text-[13px] text-left outline-none focus:border-primary"
-                  >
-                    <span className={productCategory ? "text-foreground" : "text-muted-soft"}>
-                      {productCategory || "Selecione uma categoria"}
-                    </span>
-                    <ChevronDown
-                      className={cn("size-4 text-muted-foreground transition-transform", catOpen && "rotate-180")}
-                    />
-                  </button>
-                  {catOpen && (
-                    <div className="absolute z-10 mt-1 w-full rounded-xl border border-border bg-card shadow-soft">
+                <button
+                  onClick={() => setCatOpen(!catOpen)}
+                  className="flex w-full items-center justify-between rounded-xl border border-border-soft bg-background px-4 py-3 text-[13.5px] font-medium outline-none transition-colors focus:border-primary"
+                >
+                  <span className={!productCategory ? 'opacity-50' : ''}>
+                    {productCategory || 'Selecionar categoria'}
+                  </span>
+                  <ChevronDown className="size-4 opacity-50" />
+                </button>
+                {catOpen && (
+                  <div className="absolute top-full left-0 z-10 mt-1 w-full overflow-hidden rounded-xl border border-border-soft bg-background shadow-xl">
+                    <div className="max-h-48 overflow-y-auto p-1">
                       {categories.map((c) => (
                         <button
                           key={c}
@@ -247,116 +264,62 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
                             setProductCategory(c);
                             setCatOpen(false);
                           }}
-                          className={cn(
-                            "flex w-full items-center px-3.5 py-2.5 text-[12.5px] transition-colors hover:bg-secondary",
-                            productCategory === c && "text-primary font-semibold",
-                          )}
-                        >
-                          {productCategory === c && (
-                            <Check className="mr-2 size-3 text-primary" strokeWidth={2.5} />
-                          )}
+                          className="w-full rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-accent">
                           {c}
                         </button>
                       ))}
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="mb-4">
-                <label className="mb-1.5 block text-[11px] font-bold tracking-[0.04em] text-muted-foreground uppercase">
-                  Descrição (opcional)
-                  <textarea
-                    value={productDesc}
-                    onChange={(e) => setProductDesc(e.target.value)}
-                    placeholder="Descreva o produto ou serviço..."
-                    rows={3}
-                    className="mt-1.5 w-full resize-none rounded-xl border border-border bg-card px-3.5 py-3 text-[13px] font-normal tracking-normal text-foreground normal-case outline-none placeholder:text-muted-soft focus:border-primary"
-                  />
-                </label>
-              </div>
-
-              <div className="rounded-xl border border-dashed border-success/50 bg-success/5 p-3 text-center">
-                <p className="flex items-center justify-center gap-1.5 text-[11px] text-success font-medium">
-                  <Check className="size-3.5" strokeWidth={2.5} />
-                  Publicação gratuita — sem custos, sem planos
-                </p>
-              </div>
-
-              <Nav>
-                <Secondary onClick={() => setStep(1)}>Voltar</Secondary>
-                <Primary disabled={!step2Valid} onClick={() => setStep(3)}>
-                  Publicar →
-                </Primary>
-              </Nav>
-            </div>
-          )}
-
-          {/* Step 3: Confirmation */}
-          {step === 3 && (
-            <div>
-              {/* Summary card */}
-              <div className="ink-panel rounded-2xl p-5 mb-4">
-                <p className="text-[10px] uppercase tracking-[0.08em] opacity-60 mb-3">
-                  Resumo da publicação
-                </p>
-                {[
-                  ["Loja", shopName],
-                  ["Titular", ownerName],
-                  ["WhatsApp", phone],
-                  [productType === "produto" ? "Produto" : "Serviço", productName],
-                  ["Preço", `${parseInt(productPrice || "0").toLocaleString("pt-AO")} AOA`],
-                  ["Categoria", productCategory],
-                ].map(([k, v], i, arr) => (
-                  <div
-                    key={k}
-                    className={cn(
-                      "flex justify-between py-2 text-xs",
-                      i < arr.length - 1 && "border-b border-white/10",
-                    )}
-                  >
-                    <span className="opacity-70">{k}</span>
-                    <span className="font-mono text-right max-w-[55%] truncate">{v}</span>
                   </div>
-                ))}
-                <div className="mt-3.5 rounded-xl border border-dashed border-primary/60 bg-primary/10 p-3 text-center">
-                  <p className="text-[10px] tracking-[0.05em] uppercase opacity-70">
-                    Código de referência
-                  </p>
-                  <p className="mt-1 font-mono text-[17px] tracking-[0.05em] text-primary">
-                    {code}
-                  </p>
-                </div>
+                )}
               </div>
-
-              <p className="mb-4 text-[12.5px] leading-relaxed text-muted-foreground">
-                Clique no botão abaixo para enviar os dados pelo WhatsApp. A sua publicação será
-                aprovada e estará <strong>visível gratuitamente</strong> na MUSA em até 24 horas.
-              </p>
-
-              <a
-                href={`https://wa.me/244900000000?text=${whatsappMsg}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-success py-4 text-[13px] font-bold text-success-foreground"
-              >
-                <MessageCircle className="size-4" />
-                Enviar pelo WhatsApp para publicar
-              </a>
-
-              <p className="mt-3.5 rounded-xl border border-border-soft bg-card p-3 text-[11.5px] leading-relaxed text-muted-foreground">
-                ✅ Publicação <b>completamente gratuita</b>. Após aprovação, o seu produto/serviço
-                aparecerá para todos os clientes da MUSA em Luanda.
-              </p>
-
-              <Nav>
-                <Secondary onClick={() => setStep(2)}>Voltar</Secondary>
-                <Primary onClick={handleClose}>Concluir</Primary>
-              </Nav>
+              <Field
+                label="Preço (AOA)"
+                placeholder="Ex: 15000"
+                value={productPrice}
+                onChange={setProductPrice}
+                type="number"
+              />
+              <div className="mb-5">
+                <label className="mb-1.5 block px-1 text-[11.5px] font-bold text-muted-foreground">
+                  Descrição Detalhada
+                </label>
+                <textarea
+                  value={productDesc}
+                  onChange={(e) => setProductDesc(e.target.value)}
+                  placeholder="Descreve os detalhes, materiais, condições..."
+                  className="h-24 w-full resize-none rounded-xl border border-border-soft bg-background px-4 py-3 text-[13.5px] font-medium outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-primary"
+                />
+              </div>
             </div>
-          )}
+          ) : step === 3 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-primary/20 text-primary">
+                <Check className="size-8" strokeWidth={3} />
+              </div>
+              <h3 className="mb-2 text-xl font-bold">Publicação Concluída!</h3>
+              <p className="text-sm text-muted-foreground">
+                O teu artigo já está disponível na plataforma MUSA.
+              </p>
+            </div>
+          ) : null}
         </div>
+
+        {/* Footer actions */}
+        {user && step < 3 && (
+          <div className="sticky bottom-0 border-t border-border-soft bg-background/80 p-5 backdrop-blur-md lg:p-6">
+            <button
+              onClick={step === 1 ? () => setStep(2) : () => mutation.mutate()}
+              disabled={step === 1 ? !step1Valid : !step2Valid || mutation.isPending}
+              className="flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3.5 text-[13px] font-bold text-primary-foreground shadow-neon transition-all disabled:opacity-50"
+            >
+              {mutation.isPending
+                ? "A publicar..."
+                : step === 1
+                  ? "Continuar"
+                  : "Publicar Agora"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -364,70 +327,29 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
 
 function Field({
   label,
-  placeholder,
-  type = "text",
   value,
   onChange,
+  placeholder,
+  type = "text",
 }: {
   label: string;
-  placeholder: string;
-  type?: string;
   value: string;
   onChange: (v: string) => void;
+  placeholder: string;
+  type?: string;
 }) {
   return (
-    <div className="mb-4">
-      <label className="mb-1.5 block text-[11px] font-bold tracking-[0.04em] text-muted-foreground uppercase">
+    <div className="mb-5">
+      <label className="mb-1.5 block px-1 text-[11.5px] font-bold text-muted-foreground">
         {label}
-        <input
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-3 text-[13px] font-normal tracking-normal text-foreground normal-case outline-none placeholder:text-muted-soft focus:border-primary"
-        />
       </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-border-soft bg-background px-4 py-3 text-[13.5px] font-medium outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-primary"
+      />
     </div>
-  );
-}
-
-function Nav({ children }: { children: React.ReactNode }) {
-  return <div className="mt-6 flex gap-2.5">{children}</div>;
-}
-
-function Primary({
-  children,
-  onClick,
-  disabled,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="flex-1 rounded-[13px] bg-primary py-3.5 text-[12.5px] font-bold text-primary-foreground shadow-neon transition-transform active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
-    >
-      {children}
-    </button>
-  );
-}
-
-function Secondary({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex-1 rounded-[13px] border border-border py-3.5 text-[12.5px] font-bold"
-    >
-      {children}
-    </button>
   );
 }

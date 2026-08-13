@@ -1,6 +1,8 @@
 import { Menu, Search, ShoppingBag, Heart, User, Sun, Moon, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "@tanstack/react-router";
 
 type Props = {
   query: string;
@@ -19,6 +21,8 @@ export function SiteHeader({
 }: Props) {
   const [dark, setDark] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, signInWithGoogle } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -85,13 +89,15 @@ export function SiteHeader({
             </button>
 
             <button
-              className="hidden size-9 items-center justify-center text-foreground lg:flex"
+              onClick={() => user ? navigate({ to: "/favoritos" }) : signInWithGoogle()}
+              className="hidden size-9 items-center justify-center text-foreground transition-colors hover:bg-secondary rounded-full lg:flex"
               aria-label="Favoritos"
             >
               <Heart className="size-5" strokeWidth={1.6} />
             </button>
             <button
-              className="hidden size-9 items-center justify-center text-foreground lg:flex"
+              onClick={() => user ? navigate({ to: "/perfil" }) : signInWithGoogle()}
+              className="hidden size-9 items-center justify-center text-foreground transition-colors hover:bg-secondary rounded-full lg:flex"
               aria-label="Perfil"
             >
               <User className="size-5" strokeWidth={1.6} />

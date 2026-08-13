@@ -2,6 +2,11 @@ import { Star, Check, MapPin, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Product, Service, Vendor } from "@/lib/musa-data";
 import { useState } from "react";
+import { useFavorites } from "@/hooks/useFavorites";
+import { useAuth } from "@/hooks/useAuth";
+import { useFollows } from "@/hooks/useFollows";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export function ProductCard({
   product,
@@ -10,7 +15,19 @@ export function ProductCard({
   product: Product;
   onBuy: () => void;
 }) {
-  const [liked, setLiked] = useState(false);
+  const { checkIsFavorite, toggleFavorite } = useFavorites();
+  const { signInWithGoogle, user } = useAuth();
+  
+  const isFavorite = checkIsFavorite(product.id);
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      signInWithGoogle();
+      return;
+    }
+    toggleFavorite.mutate({ itemId: product.id, itemType: "product", isFavorite });
+  };
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-[18px] border border-border-soft bg-card transition-all duration-300 hover:shadow-soft hover:-translate-y-0.5">
@@ -28,12 +45,13 @@ export function ProductCard({
         </span>
         {/* Wishlist button */}
         <button
-          onClick={(e) => { e.stopPropagation(); setLiked((v) => !v); }}
+          onClick={handleFavoriteClick}
+          disabled={toggleFavorite.isPending}
           aria-label="Adicionar aos favoritos"
           className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-card/80 backdrop-blur-sm transition-all active:scale-90"
         >
           <Heart
-            className={cn("size-3.5 transition-colors", liked ? "fill-primary text-primary" : "text-muted-foreground")}
+            className={cn("size-3.5 transition-colors", isFavorite ? "fill-primary text-primary" : "text-muted-foreground")}
           />
         </button>
         {/* Category badge */}
@@ -65,6 +83,20 @@ export function ServiceCard({
   service: Service;
   onBook: () => void;
 }) {
+  const { checkIsFavorite, toggleFavorite } = useFavorites();
+  const { signInWithGoogle, user } = useAuth();
+  
+  const isFavorite = checkIsFavorite(service.id);
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      signInWithGoogle();
+      return;
+    }
+    toggleFavorite.mutate({ itemId: service.id, itemType: "service", isFavorite });
+  };
+
   return (
     <article className="flex items-center gap-3 rounded-[18px] border border-border-soft bg-card p-3 transition-all duration-300 hover:shadow-soft hover:-translate-y-0.5">
       <div className="relative shrink-0">
@@ -102,18 +134,58 @@ export function ServiceCard({
           </span>
         </div>
       </div>
-      <button
-        onClick={onBook}
-        className="shrink-0 rounded-xl bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground shadow-neon transition-all active:scale-95 hover:shadow-neon-lg"
-      >
-        Agendar
-      </button>
+      <div className="flex flex-col items-end justify-between shrink-0 h-[72px] lg:h-[80px]">
+        <button
+          onClick={handleFavoriteClick}
+          disabled={toggleFavorite.isPending}
+          aria-label="Adicionar aos favoritos"
+          className="flex size-7 items-center justify-center rounded-full transition-all active:scale-90 hover:bg-secondary"
+        >
+          <Heart
+            className={cn("size-4 transition-colors", isFavorite ? "fill-primary text-primary" : "text-muted-foreground")}
+          />
+        </button>
+        <button
+          onClick={onBook}
+          className="rounded-xl bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground shadow-neon transition-all active:scale-95 hover:shadow-neon-lg"
+        >
+          Agendar
+        </button>
+      </div>
     </article>
   );
 }
 
 export function VendorCard({ vendor }: { vendor: Vendor }) {
-  const [following, setFollowing] = useState(false);
+  const { checkIsFollowing, toggleFollow } = useFollows();
+  const { signInWithGoogle, user } = useAuth();
+  const isFollowing = checkIsFollowing(vendor.id);
+
+  // Fetch follower count
+  const { data: followerCount = 0 } = useQuery({
+    queryKey: ["vendor_followers", vendor.id],
+    queryFn: async () => {
+      if (vendor.id.startsWith("v")) return 0; // Fallback for local dev mocks
+      const { count, error } = await supabase
+        .from("follows")
+        .select("*", { count: "exact", head: true })
+        .eq("following_id", vendor.id);
+      if (error) {
+        console.error("Error fetching followers:", error);
+        return 0;
+      }
+      return count || 0;
+    },
+  });
+
+  const handleFollowClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      signInWithGoogle();
+      return;
+    }
+    toggleFollow.mutate({ followingId: vendor.id, isFollowing });
+  };
 
   return (
     <article className="flex flex-col items-center gap-2 rounded-[18px] border border-border-soft bg-card px-3 py-5 text-center transition-all duration-300 hover:shadow-soft hover:-translate-y-0.5">
@@ -131,17 +203,21 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
       <div>
         <h3 className="text-[12.5px] font-bold">{vendor.name}</h3>
         <p className="text-[10.5px] text-muted-foreground">{vendor.cat}</p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">
+          {followerCount} {followerCount === 1 ? "seguidora" : "seguidoras"}
+        </p>
       </div>
       <button
-        onClick={() => setFollowing((v) => !v)}
+        onClick={handleFollowClick}
+        disabled={toggleFollow.isPending}
         className={cn(
-          "mt-0.5 w-full rounded-full py-1.5 text-[10.5px] font-bold transition-all",
-          following
+          "mt-1 w-full rounded-full py-1.5 text-[10.5px] font-bold transition-all disabled:opacity-70",
+          isFollowing
             ? "bg-primary text-primary-foreground shadow-neon"
             : "border border-foreground hover:bg-foreground hover:text-background",
         )}
       >
-        {following ? "A seguir ✓" : "Seguir"}
+        {isFollowing ? "A seguir ✓" : "Seguir"}
       </button>
     </article>
   );

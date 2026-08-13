@@ -93,6 +93,7 @@ const vendorMessageSchema = z.object({
   productDesc: z.string(),
   code: z.string(),
   turnstileToken: z.string().min(1).optional(),
+  flagged_for_review: z.boolean().optional(),
 });
 
 /** Envia o pedido de publicação de produto/serviço por WhatsApp (UltraMsg). */
@@ -132,9 +133,11 @@ Telefone: ${data.phone}
 Produto/Serviço: ${data.productName}
 Preço: ${data.productPrice} AOA
 Categoria: ${data.productCategory}
-Descrição: ${data.productDesc}
+Descricao: ${data.productDesc}
 
-Código: ${data.code}`;
+Codigo: ${data.code}
+
+${data.flagged_for_review ? '⚠️ ALERTA: Esta submissão requer revisão manual atenta. A moderação de segurança da IA falhou ou considerou o conteúdo ambíguo.' : ''}`;
 
     const payload = new URLSearchParams({
       token,
