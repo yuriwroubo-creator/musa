@@ -41,10 +41,16 @@ function isSchemaCacheColumnError(error: { code?: string; message?: string; deta
   );
 }
 
+function isOptionalVendorColumnError(error: { code?: string; message?: string; details?: string }) {
+  return ["business_name", "full_name", "phone"].some((column) =>
+    isSchemaCacheColumnError(error, column),
+  );
+}
+
 const publishSchema = z.object({
   shopName: z.string().min(1),
   ownerName: z.string().min(1),
-  phone: z.string().min(1),
+  phone: z.string().optional(),
   productName: z.string().min(1),
   productPrice: z.string(),
   productCategory: z.string(),
@@ -108,38 +114,30 @@ export const publishItemFn = createServerFn({ method: "POST" })
       let vendorError = null;
       for (let attempt = 0; attempt < 3; attempt++) {
         const serial_id = generateSerialId();
+        const baseVendorPayload = {
+          serial_id,
+          user_id: data.user_id,
+          plan: "basic",
+          status: "active",
+        };
+        const phone = data.phone?.trim();
         const vendorPayloads = [
           {
-            serial_id,
-            user_id: data.user_id,
+            ...baseVendorPayload,
             business_name: data.shopName,
             full_name: data.ownerName,
-            phone: data.phone,
-            plan: "basic",
-            status: "active",
+            ...(phone ? { phone } : {}),
           },
           {
-            serial_id,
-            user_id: data.user_id,
+            ...baseVendorPayload,
             full_name: data.ownerName,
-            phone: data.phone,
-            plan: "basic",
-            status: "active",
           },
           {
-            serial_id,
-            user_id: data.user_id,
+            ...baseVendorPayload,
             business_name: data.shopName,
-            phone: data.phone,
-            plan: "basic",
-            status: "active",
           },
           {
-            serial_id,
-            user_id: data.user_id,
-            phone: data.phone,
-            plan: "basic",
-            status: "active",
+            ...baseVendorPayload,
           },
         ];
 
@@ -161,11 +159,7 @@ export const publishItemFn = createServerFn({ method: "POST" })
             break;
           }
 
-          const schemaCacheColumnMismatch =
-            isSchemaCacheColumnError(res.error, "business_name") ||
-            isSchemaCacheColumnError(res.error, "full_name");
-
-          if (!schemaCacheColumnMismatch) {
+          if (!isOptionalVendorColumnError(res.error)) {
             vendorError = res.error;
             break;
           }
