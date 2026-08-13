@@ -145,12 +145,14 @@ export const publishItemFn = createServerFn({ method: "POST" })
           serial_id,
           user_id: authenticatedUserId,
           vendor_id: authenticatedUserId,
+          store_name: data.shopName,
           plan: "basic",
           status: "active",
         };
         const legacyVendorPayload = {
           serial_id,
           vendor_id: authenticatedUserId,
+          store_name: data.shopName,
           plan: "basic",
           status: "active",
         };
@@ -266,10 +268,13 @@ export const publishItemFn = createServerFn({ method: "POST" })
 
     // 4. Inserir Produto ou Serviço
     const table = data.productType === "produto" ? "products" : "services";
+    const price = parseFloat(data.productPrice) || null;
     const payload = {
       name: data.productName,
+      title: data.productName,
       description: data.productDesc,
-      price: parseFloat(data.productPrice) || null,
+      price,
+      price_aoa: price,
       category: data.productCategory,
       vendor_id: vendorId,
       flagged_for_review: data.flagged_for_review || false,
