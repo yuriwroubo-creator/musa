@@ -28,8 +28,8 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
   };
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-[22px] border border-border-soft bg-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-soft">
-      <div className="relative aspect-[1/1.15] w-full overflow-hidden">
+    <article className="group luxe-card animate-rise flex flex-col overflow-hidden rounded-[22px] transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
+      <div className="relative aspect-[1/1.18] w-full overflow-hidden bg-muted">
         <img
           src={
             product.img ||
@@ -38,8 +38,9 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
           }
           alt={product.name}
           loading="lazy"
-          className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+          className="size-full object-cover transition-transform duration-700 group-hover:scale-[1.07]"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/48 via-transparent to-black/14 opacity-80" />
         {audioUrl && (
           <button
             onClick={(e) => {
@@ -75,7 +76,7 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
           </button>
         )}
         {/* Rating badge */}
-        <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-card/90 px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm">
+        <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/88 px-2 py-1 text-[10px] font-bold text-foreground backdrop-blur-sm">
           <Star className="size-2.5 fill-primary text-primary" />
           {product.rating}
         </span>
@@ -84,7 +85,7 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
           onClick={handleFavoriteClick}
           disabled={toggleFavorite.isPending}
           aria-label="Adicionar aos favoritos"
-          className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-card/80 backdrop-blur-sm transition-all active:scale-90"
+          className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-white/82 text-foreground shadow-sm backdrop-blur-sm transition-all hover:scale-105 active:scale-90"
         >
           <Heart
             className={cn(
@@ -94,19 +95,24 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
           />
         </button>
         {/* Category badge */}
-        <span className="absolute bottom-2 left-2 rounded-full bg-foreground/70 px-2 py-0.5 text-[9px] font-semibold text-background backdrop-blur-sm">
+        <span className="absolute bottom-2 left-2 rounded-full bg-white/16 px-2.5 py-1 text-[9.5px] font-bold text-white backdrop-blur-md">
           {product.category}
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-0.5 px-3 pb-3 pt-2.5">
+      <div className="flex flex-1 flex-col gap-1 px-3.5 pb-3.5 pt-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
           {product.store}
         </p>
-        <h3 className="text-[13px] font-semibold leading-snug lg:text-sm">{product.name}</h3>
-        <p className="mt-0.5 font-mono text-[12.5px] font-bold text-primary">{product.price}</p>
+        <h3 className="min-h-[36px] text-[13px] font-bold leading-snug lg:text-sm">{product.name}</h3>
+        <div className="mt-0.5 flex items-center justify-between gap-2">
+          <p className="font-mono text-[12.5px] font-bold text-primary">{product.price}</p>
+          <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold text-accent-foreground">
+            Trend
+          </span>
+        </div>
         <button
           onClick={onBuy}
-          className="mt-auto w-full rounded-xl bg-primary py-2.5 text-[11.5px] font-bold tracking-wide text-primary-foreground shadow-neon transition-all hover:shadow-neon-lg active:scale-95"
+          className="sheen mt-auto w-full rounded-xl bg-foreground py-2.5 text-[11.5px] font-bold tracking-wide text-background shadow-soft transition-all hover:bg-primary hover:text-primary-foreground active:scale-95"
         >
           Comprar
         </button>
@@ -131,13 +137,13 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
   };
 
   return (
-    <article className="flex items-center gap-3 rounded-[22px] border border-border-soft bg-card p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-soft">
+    <article className="luxe-card animate-rise flex items-center gap-3 rounded-[22px] p-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
       <div className="relative shrink-0">
         <img
           src={service.img}
           alt={service.name}
           loading="lazy"
-          className="size-[72px] rounded-[14px] object-cover lg:size-[80px]"
+          className="size-[78px] rounded-[16px] object-cover lg:size-[92px]"
         />
         <span className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-card bg-primary">
           <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />
@@ -151,7 +157,7 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
             {service.rating}
           </span>
         </div>
-        <p className="mt-0.5 truncate text-xs text-muted-foreground">{service.title}</p>
+        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{service.title}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <span className="font-mono text-[12px] font-bold text-primary">{service.price}</span>
           <span
@@ -167,7 +173,7 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
           </span>
         </div>
       </div>
-      <div className="flex flex-col items-end justify-between shrink-0 h-[72px] lg:h-[80px]">
+      <div className="flex h-[78px] shrink-0 flex-col items-end justify-between lg:h-[92px]">
         <button
           onClick={handleFavoriteClick}
           disabled={toggleFavorite.isPending}
@@ -183,7 +189,7 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
         </button>
         <button
           onClick={onBook}
-          className="rounded-xl bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground shadow-neon transition-all active:scale-95 hover:shadow-neon-lg"
+          className="sheen rounded-xl bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground shadow-neon transition-all hover:shadow-neon-lg active:scale-95"
         >
           Agendar
         </button>
@@ -224,13 +230,13 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
   };
 
   return (
-    <article className="flex flex-col items-center gap-2 rounded-[22px] border border-border-soft bg-card px-3 py-5 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-soft">
+    <article className="luxe-card animate-rise flex flex-col items-center gap-2 rounded-[22px] px-3 py-5 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
       <div className="relative">
         <img
           src={vendor.img}
           alt={vendor.name}
           loading="lazy"
-          className="size-[60px] rounded-full border-2 border-accent object-cover lg:size-[68px]"
+          className="size-[64px] rounded-full border-[3px] border-accent object-cover shadow-soft lg:size-[72px]"
         />
         <span className="absolute -right-0.5 -bottom-0.5 flex size-5 items-center justify-center rounded-full border-2 border-card bg-primary">
           <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />

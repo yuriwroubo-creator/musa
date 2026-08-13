@@ -6,7 +6,7 @@
 
 /*
  * MUSA design system — Mercado de Beleza & Moda (Luanda)
- * Neon pink on warm off-white paper, editorial serif + geometric sans.
+ * Polished feminine commerce: porcelain, ink, rose neon, jade and warm gold.
  * All colors are oklch semantic tokens. Never hardcode colors in components.
  */
 
@@ -52,46 +52,47 @@
 
   --shadow-neon: 0 8px 22px -8px var(--neon-shadow);
   --shadow-neon-lg: 0 16px 40px -12px var(--neon-shadow);
-  --shadow-soft: 0 10px 30px -18px oklch(0.2 0.02 300 / 0.35);
+  --shadow-soft: 0 16px 46px -28px oklch(0.2 0.02 300 / 0.45);
+  --shadow-luxe: 0 24px 70px -38px oklch(0.2 0.03 300 / 0.5);
 }
 
 :root {
-  --radius: 1.25rem; /* Generous radius for pills and cards */
+  --radius: 1rem;
 
-  /* Light Theme - Clean White Base */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.15 0 0); /* Almost black for high readability */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0 0);
+  --background: oklch(0.985 0.012 85);
+  --foreground: oklch(0.17 0.018 315);
+  --card: oklch(0.998 0.004 85);
+  --card-foreground: oklch(0.17 0.018 315);
+  --popover: oklch(0.998 0.004 85);
+  --popover-foreground: oklch(0.17 0.018 315);
 
-  /* Neon Rose / Pink as Primary */
-  --primary: oklch(0.64 0.25 350); /* #FF2D78 approximate */
+  --primary: oklch(0.64 0.24 352);
   --primary-foreground: oklch(1 0 0);
-  --primary-deep: oklch(0.55 0.25 350);
-  --primary-wash: oklch(0.95 0.05 350);
+  --primary-deep: oklch(0.48 0.2 350);
+  --primary-wash: oklch(0.955 0.045 352);
 
-  --secondary: oklch(0.96 0.01 285);
-  --secondary-foreground: oklch(0.15 0 0);
-  --muted: oklch(0.96 0.01 285);
-  --muted-foreground: oklch(0.45 0.01 285); /* Darker gray for better readability */
-  --muted-soft: oklch(0.85 0.01 285);
-  --accent: oklch(0.95 0.05 350);
-  --accent-foreground: oklch(0.64 0.25 350);
+  --secondary: oklch(0.955 0.018 115);
+  --secondary-foreground: oklch(0.18 0.02 315);
+  --muted: oklch(0.94 0.012 85);
+  --muted-foreground: oklch(0.46 0.018 315);
+  --muted-soft: oklch(0.77 0.012 85);
+  --accent: oklch(0.93 0.056 158);
+  --accent-foreground: oklch(0.34 0.075 158);
 
   --destructive: oklch(0.6 0.25 25);
   --destructive-foreground: oklch(1 0 0);
   --success: oklch(0.65 0.15 150);
   --success-foreground: oklch(1 0 0);
 
-  --border: oklch(0.9 0.01 285);
-  --border-soft: oklch(0.94 0.01 285);
-  --input: oklch(0.9 0.01 285);
+  --border: oklch(0.875 0.016 85);
+  --border-soft: oklch(0.92 0.012 85);
+  --input: oklch(0.875 0.016 85);
   --ring: oklch(0.64 0.25 350);
 
-  --neon-shadow: oklch(0.64 0.25 350 / 0.4);
-  --ink-panel: linear-gradient(135deg, oklch(0.15 0 0), oklch(0.2 0 0));
+  --neon-shadow: oklch(0.64 0.24 352 / 0.34);
+  --gold: oklch(0.78 0.105 84);
+  --jade: oklch(0.55 0.105 158);
+  --ink-panel: linear-gradient(135deg, oklch(0.18 0.02 315), oklch(0.27 0.04 338));
 }
 
 .dark {
@@ -129,13 +130,16 @@
   body {
     background-color: var(--color-background);
     background-image:
-      radial-gradient(circle at 18% 0%, oklch(0.78 0.16 350 / 0.12), transparent 30%),
-      radial-gradient(circle at 84% 12%, oklch(0.87 0.08 110 / 0.08), transparent 24%),
+      linear-gradient(90deg, oklch(0.18 0.02 315 / 0.035) 1px, transparent 1px),
+      linear-gradient(180deg, oklch(0.18 0.02 315 / 0.03) 1px, transparent 1px),
+      radial-gradient(circle at 22% 0%, oklch(0.76 0.16 352 / 0.09), transparent 28%),
+      radial-gradient(circle at 88% 10%, oklch(0.78 0.1 84 / 0.08), transparent 24%),
       linear-gradient(
         180deg,
-        color-mix(in oklch, var(--color-background), white 2%),
+        color-mix(in oklch, var(--color-background), white 5%),
         var(--color-background)
       );
+    background-size: 44px 44px, 44px 44px, auto, auto, auto;
     background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
@@ -162,7 +166,7 @@
   font-family: var(--font-serif);
   font-style: italic;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 @utility neon-text {
@@ -188,6 +192,85 @@
     right: -60px;
     filter: blur(8px);
     pointer-events: none;
+  }
+}
+
+@utility luxe-card {
+  border: 1px solid color-mix(in oklch, var(--color-border), white 32%);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--color-card), white 55%), var(--color-card)),
+    var(--color-card);
+  box-shadow: var(--shadow-soft);
+}
+
+@utility glass-panel {
+  border: 1px solid color-mix(in oklch, var(--color-border), white 35%);
+  background: color-mix(in oklch, var(--color-card), transparent 14%);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(24px);
+}
+
+@utility shimmer-line {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--color-primary), white 25%),
+    color-mix(in oklch, var(--gold), white 10%),
+    transparent
+  );
+}
+
+@keyframes musa-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes musa-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes musa-sheen {
+  from {
+    transform: translateX(-120%) rotate(12deg);
+  }
+  to {
+    transform: translateX(160%) rotate(12deg);
+  }
+}
+
+@utility animate-float-soft {
+  animation: musa-float 5.5s ease-in-out infinite;
+}
+
+@utility animate-rise {
+  animation: musa-rise 0.55s ease-out both;
+}
+
+@utility sheen {
+  position: relative;
+  overflow: hidden;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -60% auto -60% -30%;
+    width: 34%;
+    background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.38), transparent);
+    transform: translateX(-120%) rotate(12deg);
+  }
+  &:hover::before {
+    animation: musa-sheen 0.9s ease;
   }
 }
 

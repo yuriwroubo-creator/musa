@@ -12,8 +12,17 @@ import { ItemDrawer, type DrawerItem } from "@/components/musa/ItemDrawer";
 import { useSellModal } from "@/lib/SellContext";
 import { products, services, vendors, productCategories, serviceCategories } from "@/lib/musa-data";
 import { cn } from "@/lib/utils";
-import { ShoppingBag } from "lucide-react";
+import { Check, ChevronRight, Play, ShoppingBag, Sparkles, TrendingUp, Wand2, X } from "lucide-react";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
+import heroLace from "@/assets/prod-lace.jpg";
+import heroVestido from "@/assets/prod-vestido.jpg";
+import {
+  getTasteProfile,
+  saveTasteProfile,
+  scoreCatalogItem,
+  tasteOptions,
+  type TasteProfile,
+} from "@/lib/personalization";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -54,6 +63,8 @@ function Index() {
   const [drawerItem, setDrawerItem] = useState<DrawerItem | null>(null);
   const { setSellOpen } = useSellModal();
   const [cart, setCart] = useState(0);
+  const [tasteProfile, setTasteProfile] = useState<TasteProfile>(() => getTasteProfile());
+  const [tasteOpen, setTasteOpen] = useState(false);
 
   const q = query.trim().toLowerCase();
   const isDev = import.meta.env.DEV;
@@ -148,6 +159,29 @@ function Index() {
   const { follows, isLoading: loadingFollows } = useFollows();
   const { user, signInWithGoogle } = useAuth();
 
+  useEffect(() => {
+    if (!tasteProfile.completed) {
+      const timer = window.setTimeout(() => setTasteOpen(true), user ? 650 : 1400);
+      return () => window.clearTimeout(timer);
+    }
+  }, [tasteProfile.completed, user]);
+
+  useEffect(() => {
+    const normalized = query.trim().toLowerCase();
+    if (normalized.length < 3) return;
+    const timer = window.setTimeout(() => {
+      setTasteProfile((current) => {
+        const next = {
+          ...current,
+          searches: [normalized, ...current.searches.filter((item) => item !== normalized)].slice(0, 10),
+        };
+        saveTasteProfile(next);
+        return next;
+      });
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
   const followedVendors = useMemo(() => {
     if (!follows) return [];
     const followedIds = follows.map((f) => f.following_id);
@@ -168,10 +202,14 @@ function Index() {
         img: hit.image_url || "https://placehold.co/400x500/f3f4f6/1f2937?text=MUSA",
       }));
     }
-    return baseProducts.filter(
+    const filtered = baseProducts.filter(
       (p: any) => prodCat === "Todos" || prodCat === "Promoções" || p.category === prodCat,
     );
-  }, [q, searchResults, prodCat, baseProducts]);
+    return [...filtered].sort(
+      (a: any, b: any) =>
+        scoreCatalogItem(b, tasteProfile, query) - scoreCatalogItem(a, tasteProfile, query),
+    );
+  }, [q, searchResults, prodCat, baseProducts, tasteProfile, query]);
 
   const visibleServices = useMemo(() => {
     if (q !== "") {
@@ -186,8 +224,35 @@ function Index() {
         img: hit.image_url || "https://placehold.co/400x400/f3f4f6/1f2937?text=MUSA",
       }));
     }
-    return baseServices.filter((s: any) => svcCat === "Todos" || s.category === svcCat);
-  }, [q, searchResults, svcCat, baseServices]);
+    const filtered = baseServices.filter((s: any) => svcCat === "Todos" || s.category === svcCat);
+    return [...filtered].sort(
+      (a: any, b: any) =>
+        scoreCatalogItem(b, tasteProfile, query) - scoreCatalogItem(a, tasteProfile, query),
+    );
+  }, [q, searchResults, svcCat, baseServices, tasteProfile, query]);
+
+  const preferredLabels = useMemo(
+    () =>
+      tasteProfile.categories
+        .slice(0, 3)
+        .map((category) => tasteOptions.find((option) => option.id === category)?.label || category),
+    [tasteProfile.categories],
+  );
+
+  const recordInteraction = (item: any) => {
+    setTasteProfile((current) => {
+      const next = {
+        ...current,
+        interactions: {
+          ...current.interactions,
+          [item.id]: (current.interactions[item.id] || 0) + 1,
+          [item.category]: (current.interactions[item.category] || 0) + 1,
+        },
+      };
+      saveTasteProfile(next);
+      return next;
+    });
+  };
 
   const confirm = (item: DrawerItem) => {
     setDrawerItem(null);
@@ -243,10 +308,32 @@ function Index() {
       />
 
       <main className="mx-auto w-full max-w-6xl px-5 lg:px-8">
+        <HeroExperience
+          personalized={tasteProfile.completed}
+          preferredLabels={preferredLabels}
+          onPersonalize={() => setTasteOpen(true)}
+          onSellClick={() => setSellOpen(true)}
+        />
+
+        <StoryRail
+          categories={tasteOptions}
+          selected={tab === "produtos" ? prodCat : svcCat}
+          onSelect={(category) => {
+            const serviceCategoriesSet = new Set(serviceCategories);
+            if (serviceCategoriesSet.has(category)) {
+              setTab("servicos");
+              setSvcCat(category);
+            } else {
+              setTab("produtos");
+              setProdCat(category);
+            }
+          }}
+        />
+
         {/* Tabs */}
         <div
           role="tablist"
-          className="mt-4 flex gap-1.5 rounded-2xl border border-border-soft bg-card p-1 lg:mx-auto lg:mt-8 lg:max-w-xl"
+          className="glass-panel mt-4 flex gap-1.5 rounded-2xl p-1 lg:mx-auto lg:mt-8 lg:max-w-xl"
         >
           {tabs.map((t) => (
             <button
@@ -283,14 +370,15 @@ function Index() {
                   <ProductCard
                     key={p.id}
                     product={p}
-                    onBuy={() =>
+                    onBuy={() => {
+                      recordInteraction(p);
                       setDrawerItem({
                         kind: "product",
                         img: p.img || p.image_url,
                         title: p.name,
                         price: p.price,
-                      })
-                    }
+                      });
+                    }}
                   />
                 ))}
               </div>
@@ -320,14 +408,15 @@ function Index() {
                   <ServiceCard
                     key={s.id}
                     service={s}
-                    onBook={() =>
+                    onBook={() => {
+                      recordInteraction(s);
                       setDrawerItem({
                         kind: "service",
                         img: s.img || s.image_url,
                         title: s.title || s.name,
                         price: s.price,
-                      })
-                    }
+                      });
+                    }}
                   />
                 ))}
               </div>
@@ -472,6 +561,215 @@ function Index() {
       </footer>
 
       <ItemDrawer item={drawerItem} onClose={() => setDrawerItem(null)} onConfirm={confirm} />
+      <TasteOnboarding
+        open={tasteOpen}
+        profile={tasteProfile}
+        onClose={() => setTasteOpen(false)}
+        onSave={(categories) => {
+          const next = { ...tasteProfile, categories, completed: true };
+          setTasteProfile(next);
+          saveTasteProfile(next);
+          setTasteOpen(false);
+          toast.success("Feed personalizado", {
+            description: "A MUSA vai priorizar conteúdos alinhados aos teus gostos.",
+          });
+        }}
+      />
+    </div>
+  );
+}
+
+function HeroExperience({
+  personalized,
+  preferredLabels,
+  onPersonalize,
+  onSellClick,
+}: {
+  personalized: boolean;
+  preferredLabels: string[];
+  onPersonalize: () => void;
+  onSellClick: () => void;
+}) {
+  return (
+    <section className="relative isolate mt-5 overflow-hidden rounded-[28px] bg-foreground text-background shadow-luxe lg:mt-8">
+      <img src={heroLace} alt="" className="absolute inset-0 size-full object-cover opacity-45" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/88 via-black/58 to-black/16" />
+      <div className="relative grid min-h-[360px] gap-8 px-5 py-7 sm:px-8 lg:grid-cols-[1.08fr_0.92fr] lg:px-10 lg:py-10">
+        <div className="flex max-w-xl flex-col justify-between">
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase text-white/82 backdrop-blur-xl">
+              <Sparkles className="size-3.5 text-primary" />
+              Social commerce de beleza em Luanda
+            </div>
+            <h1 className="display max-w-[11ch] text-[3rem] leading-[0.92] text-white sm:text-[4.4rem] lg:text-[5.3rem]">
+              MUSA
+            </h1>
+            <p className="mt-4 max-w-md text-sm leading-6 text-white/76 lg:text-[15px]">
+              Uma vitrine chique para descobrir laces, moda, make, unhas, serviços e criadoras
+              com um feed que aprende com os teus gostos.
+            </p>
+          </div>
+          <div className="mt-7 flex flex-wrap gap-2.5">
+            <button
+              onClick={onPersonalize}
+              className="sheen inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-xs font-bold text-white shadow-neon-lg transition active:scale-95"
+            >
+              <Wand2 className="size-4" />
+              {personalized ? "Ajustar gostos" : "Criar o meu feed"}
+            </button>
+            <button
+              onClick={onSellClick}
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-xs font-bold text-white backdrop-blur-xl transition hover:bg-white/16 active:scale-95"
+            >
+              Publicar grátis
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="hidden items-end justify-end lg:flex">
+          <div className="animate-float-soft w-[310px] rounded-[28px] border border-white/18 bg-white/12 p-3 shadow-luxe backdrop-blur-2xl">
+            <div className="relative aspect-[9/13] overflow-hidden rounded-[22px]">
+              <img src={heroVestido} alt="Moda MUSA" className="size-full object-cover" />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/78 to-transparent p-4 text-white">
+                <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold">
+                  <Play className="size-3.5 fill-white" />
+                  Para si agora
+                </div>
+                <p className="text-sm font-bold">Vestidos, glow e serviços que combinam contigo.</p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {(preferredLabels.length ? preferredLabels : ["Moda elegante", "Glow & make"]).map((label) => (
+                    <span key={label} className="rounded-full bg-white/16 px-2.5 py-1 text-[10px] font-semibold backdrop-blur">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StoryRail({
+  categories,
+  selected,
+  onSelect,
+}: {
+  categories: typeof tasteOptions;
+  selected: string;
+  onSelect: (category: string) => void;
+}) {
+  return (
+    <div className="no-scrollbar -mx-5 mt-5 flex gap-3 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0">
+      {categories.slice(0, 9).map((category) => (
+        <button
+          key={category.id}
+          onClick={() => onSelect(category.id)}
+          className="group flex w-[76px] shrink-0 flex-col items-center gap-2 text-center"
+        >
+          <span
+            className={cn(
+              "relative flex size-[64px] items-center justify-center rounded-full p-[2px] transition duration-300 group-hover:-translate-y-1",
+              selected === category.id
+                ? "bg-gradient-to-br from-primary via-[color:var(--gold)] to-[color:var(--jade)]"
+                : "bg-gradient-to-br from-primary/60 via-border to-accent",
+            )}
+          >
+            <span className="flex size-full items-center justify-center rounded-full bg-card text-[10px] font-black uppercase text-foreground">
+              {category.label.split(" ")[0]}
+            </span>
+          </span>
+          <span className="line-clamp-2 text-[10px] font-semibold leading-tight text-muted-foreground">
+            {category.label}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TasteOnboarding({
+  open,
+  profile,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  profile: TasteProfile;
+  onClose: () => void;
+  onSave: (categories: string[]) => void;
+}) {
+  const [selected, setSelected] = useState<string[]>(profile.categories);
+
+  useEffect(() => {
+    if (open) setSelected(profile.categories);
+  }, [open, profile.categories]);
+
+  if (!open) return null;
+
+  const toggle = (id: string) => {
+    setSelected((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id].slice(0, 6),
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end bg-foreground/45 px-3 pb-3 backdrop-blur-sm sm:items-center sm:justify-center sm:p-5">
+      <div className="animate-rise w-full max-w-xl rounded-[28px] bg-card p-4 shadow-luxe sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="mb-2 inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase text-accent-foreground">
+              <TrendingUp className="size-3" />
+              Feed inteligente
+            </p>
+            <h2 className="display text-3xl leading-none text-foreground">Escolhe o teu mood</h2>
+            <p className="mt-2 text-sm leading-5 text-muted-foreground">
+              Toca nas opções que combinam contigo. A MUSA usa isto para ordenar produtos,
+              serviços e marcas no teu “Para si”.
+            </p>
+          </div>
+          <button onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          {tasteOptions.map((option) => {
+            const active = selected.includes(option.id);
+            return (
+              <button
+                key={option.id}
+                onClick={() => toggle(option.id)}
+                className={cn(
+                  "min-h-[76px] rounded-2xl border p-3 text-left transition-all active:scale-[0.98]",
+                  active
+                    ? "border-primary bg-primary text-primary-foreground shadow-neon"
+                    : "border-border-soft bg-secondary/70 text-foreground hover:border-primary/45",
+                )}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] font-bold leading-tight">{option.label}</span>
+                  {active && <Check className="size-4 shrink-0" />}
+                </span>
+                <span className={cn("mt-2 block text-[10px]", active ? "text-white/78" : "text-muted-foreground")}>
+                  {option.id}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={() => onSave(selected)}
+          disabled={selected.length === 0}
+          className="sheen mt-5 w-full rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-neon disabled:opacity-45"
+        >
+          Guardar e ver recomendações
+        </button>
+      </div>
     </div>
   );
 }

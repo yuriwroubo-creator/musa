@@ -41,8 +41,8 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border-soft bg-background/80 shadow-[0_-12px_40px_-24px_rgba(255,45,120,0.4)] backdrop-blur-2xl lg:hidden">
-      <div className="flex items-center justify-around px-2 py-2 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border-soft bg-background/82 shadow-[0_-18px_46px_-28px_rgba(255,45,120,0.45)] backdrop-blur-2xl lg:hidden">
+      <div className="mx-auto flex max-w-md items-center justify-around px-2 py-2 pb-safe">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.path ? currentPath === item.path : false;
@@ -53,13 +53,13 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
               key={item.label}
               onClick={() => handleNavClick(item)}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 transition-all duration-300",
+                "flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 transition-all duration-300 active:scale-95",
                 isPublish && "scale-110",
               )}
               aria-label={item.label}
             >
               {isPublish ? (
-                <span className="flex h-11 w-[3.25rem] items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[#FF6DB0] shadow-neon transition-transform duration-300 active:scale-95">
+                <span className="sheen flex h-11 w-[3.25rem] items-center justify-center rounded-2xl bg-primary shadow-neon transition-transform duration-300">
                   <Icon className="size-5 text-white" strokeWidth={2.2} />
                 </span>
               ) : (

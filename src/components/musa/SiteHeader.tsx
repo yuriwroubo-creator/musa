@@ -49,12 +49,12 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
   const avatarUrl = user?.user_metadata?.avatar_url;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border-soft/70 bg-background/70 backdrop-blur-2xl">
+    <header className="sticky top-0 z-40 border-b border-border-soft/70 bg-background/76 backdrop-blur-2xl">
       <div className="mx-auto w-full max-w-6xl px-5 py-3 lg:px-8 lg:py-3.5">
         <div className="flex items-center justify-between gap-4">
           {/* Mobile menu */}
           <button
-            className="flex size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary lg:hidden"
+            className="flex size-9 items-center justify-center rounded-full border border-border-soft bg-card/75 text-foreground shadow-sm transition-colors hover:bg-secondary lg:hidden"
             aria-label="Menu"
             onClick={() => setMenuOpen((v) => !v)}
           >
@@ -62,15 +62,15 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
           </button>
 
           {/* Logo */}
-          <a href="/" className="flex items-center gap-1.5 lg:order-first">
-            <span className="display text-[1.7rem] font-black leading-none tracking-[0.03em] text-foreground">
+          <a href="/" className="group flex items-center gap-1.5 lg:order-first">
+            <span className="display text-[1.8rem] font-black leading-none text-foreground transition-colors group-hover:text-primary">
               MUSA
             </span>
             <span className="neon-text -translate-y-2 text-[13px]">✦</span>
           </a>
 
           {/* Desktop search */}
-          <div className="hidden flex-1 items-center gap-3 rounded-full border border-border-soft bg-card/80 px-4 py-2.5 shadow-sm lg:flex">
+          <div className="glass-panel hidden flex-1 items-center gap-3 rounded-full px-4 py-2.5 lg:flex">
             <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.8} />
             <input
               value={query}
@@ -84,7 +84,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
           {/* Right actions */}
           <div className="flex items-center gap-1 lg:gap-2">
             {/* Location pill — desktop */}
-            <div className="mr-1 hidden items-center gap-1 rounded-full border border-border-soft px-2.5 py-1.5 lg:flex">
+            <div className="mr-1 hidden items-center gap-1 rounded-full border border-border-soft bg-card/70 px-2.5 py-1.5 shadow-sm lg:flex">
               <MapPin className="size-3 text-primary" />
               <span className="text-[10px] font-medium text-muted-foreground">Luanda</span>
             </div>
@@ -92,7 +92,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
             <button
               onClick={onSellClick}
               id="btn-sell-header"
-              className="mr-1 hidden rounded-full bg-gradient-to-r from-primary to-[#FF6DB0] px-4 py-2.5 text-xs font-bold text-white shadow-neon transition-all hover:opacity-90 active:scale-95 lg:block"
+              className="sheen mr-1 hidden rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-white shadow-neon transition-all hover:shadow-neon-lg active:scale-95 lg:block"
             >
               + Publicar Grátis
             </button>
@@ -100,7 +100,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
             {/* Dark mode toggle */}
             <button
               onClick={() => setDark((v) => !v)}
-              className="flex size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
+              className="flex size-9 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-card"
               aria-label={dark ? "Modo claro" : "Modo escuro"}
             >
               {dark ? (
@@ -120,7 +120,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
             {/* Favorites */}
             <button
               onClick={() => (user ? navigate({ to: "/favoritos" }) : signInWithGoogle())}
-              className="hidden size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary lg:flex"
+              className="hidden size-9 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-card lg:flex"
               aria-label="Favoritos"
             >
               <Heart className="size-5" strokeWidth={1.6} />
@@ -130,7 +130,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
             {user ? (
               <button
                 onClick={() => navigate({ to: "/dashboard" })}
-                className="hidden size-9 items-center justify-center overflow-hidden rounded-full border-2 border-primary/40 transition-all hover:border-primary lg:flex"
+                className="hidden size-9 items-center justify-center overflow-hidden rounded-full border-2 border-primary/40 shadow-sm transition-all hover:border-primary lg:flex"
                 aria-label="Dashboard"
               >
                 {avatarUrl ? (
@@ -144,7 +144,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
             ) : (
               <button
                 onClick={signInWithGoogle}
-                className="hidden size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary lg:flex"
+                className="hidden size-9 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-card lg:flex"
                 aria-label="Entrar"
               >
                 <User className="size-5" strokeWidth={1.6} />
@@ -154,7 +154,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
             {/* Cart */}
             <button
               onClick={onCartClick}
-              className="relative flex size-9 items-center justify-center text-foreground"
+              className="relative flex size-9 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-card"
               aria-label={`Carrinho — ${cartCount} itens`}
             >
               <ShoppingBag className="size-5" strokeWidth={1.6} />
@@ -171,7 +171,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
         </div>
 
         {/* Mobile search */}
-        <div className="mt-3 flex items-center gap-2.5 rounded-full border border-border-soft bg-card/85 px-3.5 py-2.5 shadow-sm lg:hidden">
+        <div className="glass-panel mt-3 flex items-center gap-2.5 rounded-full px-3.5 py-2.5 lg:hidden">
           <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.8} />
           <input
             id="mobile-search-input"
@@ -185,13 +185,13 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
 
         {/* Mobile menu dropdown */}
         {menuOpen && (
-          <div className="mt-2 rounded-[24px] border border-border-soft bg-card p-4 shadow-soft lg:hidden">
+          <div className="glass-panel mt-2 rounded-[24px] p-4 lg:hidden">
             <button
               onClick={() => {
                 onSellClick();
                 setMenuOpen(false);
               }}
-              className="w-full rounded-2xl bg-gradient-to-r from-primary to-[#FF6DB0] px-4 py-3 text-sm font-bold text-white shadow-neon"
+              className="sheen w-full rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-neon"
             >
               + Publicar Produto/Serviço — Grátis
             </button>
