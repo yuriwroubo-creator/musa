@@ -10,12 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FavoritosRouteImport } from './routes/favoritos'
+import { Route as MensagensRouteImport } from './routes/mensagens'
 import { Route as PerfilRouteImport } from './routes/perfil'
+import { Route as ChatConversationIdRouteImport } from './routes/chat.$conversationId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FavoritosRoute = FavoritosRouteImport.update({
@@ -23,40 +31,81 @@ const FavoritosRoute = FavoritosRouteImport.update({
   path: '/favoritos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MensagensRoute = MensagensRouteImport.update({
+  id: '/mensagens',
+  path: '/mensagens',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PerfilRoute = PerfilRouteImport.update({
   id: '/perfil',
   path: '/perfil',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChatConversationIdRoute = ChatConversationIdRouteImport.update({
+  id: '/chat/$conversationId',
+  path: '/chat/$conversationId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/favoritos': typeof FavoritosRoute
+  '/mensagens': typeof MensagensRoute
   '/perfil': typeof PerfilRoute
+  '/chat/$conversationId': typeof ChatConversationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/favoritos': typeof FavoritosRoute
+  '/mensagens': typeof MensagensRoute
   '/perfil': typeof PerfilRoute
+  '/chat/$conversationId': typeof ChatConversationIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/favoritos': typeof FavoritosRoute
+  '/mensagens': typeof MensagensRoute
   '/perfil': typeof PerfilRoute
+  '/chat/$conversationId': typeof ChatConversationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/favoritos' | '/perfil'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/favoritos'
+    | '/mensagens'
+    | '/perfil'
+    | '/chat/$conversationId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/favoritos' | '/perfil'
-  id: '__root__' | '/' | '/favoritos' | '/perfil'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/favoritos'
+    | '/mensagens'
+    | '/perfil'
+    | '/chat/$conversationId'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/favoritos'
+    | '/mensagens'
+    | '/perfil'
+    | '/chat/$conversationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRoute
   FavoritosRoute: typeof FavoritosRoute
+  MensagensRoute: typeof MensagensRoute
   PerfilRoute: typeof PerfilRoute
+  ChatConversationIdRoute: typeof ChatConversationIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,11 +117,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/favoritos': {
       id: '/favoritos'
       path: '/favoritos'
       fullPath: '/favoritos'
       preLoaderRoute: typeof FavoritosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mensagens': {
+      id: '/mensagens'
+      path: '/mensagens'
+      fullPath: '/mensagens'
+      preLoaderRoute: typeof MensagensRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/perfil': {
@@ -82,13 +145,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PerfilRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat/$conversationId': {
+      id: '/chat/$conversationId'
+      path: '/chat/$conversationId'
+      fullPath: '/chat/$conversationId'
+      preLoaderRoute: typeof ChatConversationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRoute,
   FavoritosRoute: FavoritosRoute,
+  MensagensRoute: MensagensRoute,
   PerfilRoute: PerfilRoute,
+  ChatConversationIdRoute: ChatConversationIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

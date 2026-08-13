@@ -10,13 +10,7 @@ import { SiteHeader } from "@/components/musa/SiteHeader";
 import { ProductCard, ServiceCard, VendorCard } from "@/components/musa/Cards";
 import { ItemDrawer, type DrawerItem } from "@/components/musa/ItemDrawer";
 import { useSellModal } from "@/lib/SellContext";
-import {
-  products,
-  services,
-  vendors,
-  productCategories,
-  serviceCategories,
-} from "@/lib/musa-data";
+import { products, services, vendors, productCategories, serviceCategories } from "@/lib/musa-data";
 import { cn } from "@/lib/utils";
 import { ShoppingBag } from "lucide-react";
 
@@ -74,7 +68,8 @@ function Index() {
   } = useInfiniteQuery({
     queryKey: ["products_with_views"],
     initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => (lastPage.length === 12 ? allPages.length : undefined),
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === 12 ? allPages.length : undefined,
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase
         .from("products_with_views")
@@ -97,7 +92,8 @@ function Index() {
   } = useInfiniteQuery({
     queryKey: ["services"],
     initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => (lastPage.length === 12 ? allPages.length : undefined),
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === 12 ? allPages.length : undefined,
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase
         .from("services")
@@ -109,13 +105,44 @@ function Index() {
     },
   });
 
+  const {
+    data: dbVendors,
+    isLoading: loadingVendors,
+    error: errorVendors,
+  } = useQuery({
+    queryKey: ["vendor_subscriptions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vendor_subscriptions")
+        .select("id, serial_id, full_name, business_name, plan, status")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((vendor) => {
+        const displayName = vendor.business_name || vendor.full_name || vendor.serial_id;
+        const iconText = encodeURIComponent(displayName.split(" ").slice(0, 2).join(" "));
+
+        return {
+          id: vendor.id,
+          name: displayName,
+          cat: vendor.plan || vendor.status || "Vendedora MUSA",
+          img: `https://placehold.co/240x240/f3f4f6/1f2937?text=${iconText}`,
+        };
+      });
+    },
+  });
+
   // Base Data (Flatten infinite pages)
   const dbProducts = useMemo(() => productsData?.pages.flat() || [], [productsData]);
   const dbServices = useMemo(() => servicesData?.pages.flat() || [], [servicesData]);
+  const baseVendors = useMemo(
+    () => (isDev && (!dbVendors || dbVendors.length === 0) ? vendors : (dbVendors ?? [])),
+    [dbVendors, isDev],
+  );
 
   const baseProducts = isDev && dbProducts.length === 0 ? products : dbProducts;
   const baseServices = isDev && dbServices.length === 0 ? services : dbServices;
-  const baseVendors = isDev && (!dbVendors || dbVendors.length === 0) ? vendors : (dbVendors ?? []);
 
   const { follows, isLoading: loadingFollows } = useFollows();
   const { user, signInWithGoogle } = useAuth();
@@ -145,7 +172,7 @@ function Index() {
       }));
     }
     return baseProducts.filter(
-      (p: any) => prodCat === "Todos" || prodCat === "Promoções" || p.category === prodCat
+      (p: any) => prodCat === "Todos" || prodCat === "Promoções" || p.category === prodCat,
     );
   }, [q, searchResults, prodCat, baseProducts]);
 
@@ -162,9 +189,7 @@ function Index() {
         img: hit.image_url || "https://placehold.co/400x400/f3f4f6/1f2937?text=MUSA",
       }));
     }
-    return baseServices.filter(
-      (s: any) => svcCat === "Todos" || s.category === svcCat
-    );
+    return baseServices.filter((s: any) => svcCat === "Todos" || s.category === svcCat);
   }, [q, searchResults, svcCat, baseServices]);
 
   const confirm = (item: DrawerItem) => {
@@ -191,14 +216,22 @@ function Index() {
           }
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     if (loadMoreRef.current) {
       observer.observe(loadMoreRef.current);
     }
     return () => observer.disconnect();
-  }, [tab, hasNextProducts, isFetchingNextProducts, fetchNextProducts, hasNextServices, isFetchingNextServices, fetchNextServices]);
+  }, [
+    tab,
+    hasNextProducts,
+    isFetchingNextProducts,
+    fetchNextProducts,
+    hasNextServices,
+    isFetchingNextServices,
+    fetchNextServices,
+  ]);
 
   return (
     <div className="min-h-screen pb-28 lg:pb-0">
@@ -206,12 +239,13 @@ function Index() {
         query={query}
         onQueryChange={setQuery}
         cartCount={cart}
-        onCartClick={() => toast(`Carrinho`, { description: `${cart} ${cart === 1 ? "item" : "itens"}` })}
+        onCartClick={() =>
+          toast(`Carrinho`, { description: `${cart} ${cart === 1 ? "item" : "itens"}` })
+        }
         onSellClick={() => setSellOpen(true)}
       />
 
       <main className="mx-auto w-full max-w-6xl px-5 lg:px-8">
-
         {/* Tabs */}
         <div
           role="tablist"
@@ -239,10 +273,7 @@ function Index() {
         {tab === "produtos" && (
           <section>
             <Pills options={productCategories} value={prodCat} onChange={setProdCat} />
-            <SectionTitle
-              title="Selecionado para si"
-              sub=""
-            />
+            <SectionTitle title="Selecionado para si" sub="" />
             {errorProducts ? (
               <ErrorState message="Não foi possível carregar os produtos. Tenta novamente." />
             ) : loadingProducts ? (
@@ -267,7 +298,7 @@ function Index() {
                 ))}
               </div>
             )}
-            
+
             {(hasNextProducts || isFetchingNextProducts) && visibleProducts.length > 0 && (
               <div ref={loadMoreRef} className="py-8 text-center">
                 <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -279,10 +310,7 @@ function Index() {
         {tab === "servicos" && (
           <section>
             <Pills options={serviceCategories} value={svcCat} onChange={setSvcCat} />
-            <SectionTitle
-              title="Profissionais perto de si"
-              sub=""
-            />
+            <SectionTitle title="Profissionais perto de si" sub="" />
             {errorServices ? (
               <ErrorState message="Não foi possível carregar os serviços. Tenta novamente." />
             ) : loadingServices ? (
@@ -307,7 +335,7 @@ function Index() {
                 ))}
               </div>
             )}
-            
+
             {(hasNextServices || isFetchingNextServices) && visibleServices.length > 0 && (
               <div ref={loadMoreRef} className="py-8 text-center">
                 <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -318,10 +346,7 @@ function Index() {
 
         {tab === "lojas" && (
           <section>
-            <SectionTitle
-              title="Marcas verificadas"
-              sub="Empreendedoras da comunidade MUSA"
-            />
+            <SectionTitle title="Marcas verificadas" sub="Empreendedoras da comunidade MUSA" />
             {errorVendors ? (
               <ErrorState message="Não foi possível carregar as marcas. Tenta novamente." />
             ) : loadingVendors ? (
@@ -331,7 +356,10 @@ function Index() {
             ) : (
               <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
                 {baseVendors.map((v: any) => (
-                  <VendorCard key={v.id || v.serial_id} vendor={{ ...v, name: v.name || v.business_name || v.full_name }} />
+                  <VendorCard
+                    key={v.id || v.serial_id}
+                    vendor={{ ...v, name: v.name || v.business_name || v.full_name }}
+                  />
                 ))}
               </div>
             )}
@@ -356,10 +384,7 @@ function Index() {
 
         {tab === "seguidoras" && (
           <section>
-            <SectionTitle
-              title="Lojas que segues"
-              sub="Acompanha as tuas marcas favoritas"
-            />
+            <SectionTitle title="Lojas que segues" sub="Acompanha as tuas marcas favoritas" />
             {!user ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <p className="mb-4 text-[13px] font-medium text-muted-foreground">
@@ -379,7 +404,10 @@ function Index() {
             ) : (
               <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
                 {followedVendors.map((v: any) => (
-                  <VendorCard key={v.id || v.serial_id} vendor={{ ...v, name: v.name || v.business_name || v.full_name }} />
+                  <VendorCard
+                    key={v.id || v.serial_id}
+                    vendor={{ ...v, name: v.name || v.business_name || v.full_name }}
+                  />
                 ))}
               </div>
             )}
@@ -405,7 +433,10 @@ function Index() {
                 Explorar
               </p>
               {["Produtos", "Serviços", "Lojas & Marcas", "Promoções"].map((l) => (
-                <p key={l} className="mb-2 text-[12.5px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+                <p
+                  key={l}
+                  className="mb-2 text-[12.5px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                >
                   {l}
                 </p>
               ))}
@@ -415,7 +446,10 @@ function Index() {
                 Vendedoras
               </p>
               {["Criar conta grátis", "Como funciona", "Dúvidas frequentes", "Suporte"].map((l) => (
-                <p key={l} className="mb-2 text-[12.5px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+                <p
+                  key={l}
+                  className="mb-2 text-[12.5px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                >
                   {l}
                 </p>
               ))}
@@ -440,11 +474,7 @@ function Index() {
         </div>
       </footer>
 
-      <ItemDrawer
-        item={drawerItem}
-        onClose={() => setDrawerItem(null)}
-        onConfirm={confirm}
-      />
+      <ItemDrawer item={drawerItem} onClose={() => setDrawerItem(null)} onConfirm={confirm} />
     </div>
   );
 }
