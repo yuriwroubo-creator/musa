@@ -17,6 +17,7 @@ export type Product = {
   rating: string;
   category: string;
   img: string;
+  media_urls?: string[];
 };
 
 export type Service = {
@@ -28,6 +29,7 @@ export type Service = {
   rating: string;
   category: string;
   img: string;
+  media_urls?: string[];
 };
 
 export type Vendor = {
@@ -43,6 +45,10 @@ export const productCategories = [
   "Cabelos & Laces",
   "Maquilhagem",
   "Lingerie",
+  "Doces & Catering",
+  "Bebidas Artesanais",
+  "Beats & Áudio",
+  "Design & Arte",
   "Promoções",
 ];
 
@@ -52,6 +58,10 @@ export const serviceCategories = [
   "Maquilhagem",
   "Unhas",
   "Spa em Casa",
+  "Fotografia",
+  "Videografia",
+  "Design",
+  "Produção Musical",
 ];
 
 export const products: Product[] = [
@@ -109,6 +119,36 @@ export const products: Product[] = [
     category: "Cabelos & Laces",
     img: prodPeruca,
   },
+  {
+    id: "p7",
+    store: "Doce Kianda",
+    name: "Caixa Gourmet Brigadeiros",
+    price: "12.500 AOA",
+    rating: "5.0",
+    category: "Doces & Catering",
+    img: prodVestido,
+  },
+  {
+    id: "p8",
+    store: "Ondas Criativas",
+    name: "Beat Afro House Premium",
+    price: "9.500 AOA",
+    rating: "4.9",
+    category: "Beats & Áudio",
+    img: prodPaleta,
+    media_urls: [
+      "https://cdn.pixabay.com/download/audio/2022/10/25/audio_6f9f0f8f64.mp3?filename=hip-hop-163138.mp3",
+    ],
+  },
+  {
+    id: "p9",
+    store: "Atelier Kianda",
+    name: "Brand Kit para Criadoras",
+    price: "18.000 AOA",
+    rating: "4.8",
+    category: "Design & Arte",
+    img: prodBlazer,
+  },
 ];
 
 export const services: Service[] = [
@@ -150,6 +190,46 @@ export const services: Service[] = [
     home: true,
     rating: "4.8",
     category: "Spa em Casa",
+    img: svcSpa,
+  },
+  {
+    id: "s5",
+    name: "Luz da Kianda",
+    title: "Sessão Fotográfica de Marca",
+    price: "28.000 AOA / 2h",
+    home: false,
+    rating: "5.0",
+    category: "Fotografia",
+    img: svcMarcia,
+  },
+  {
+    id: "s6",
+    name: "Frame Studio",
+    title: "Videografia Vertical para Reels",
+    price: "32.000 AOA / 2h",
+    home: false,
+    rating: "4.9",
+    category: "Videografia",
+    img: svcNzinga,
+  },
+  {
+    id: "s7",
+    name: "Musa Design Lab",
+    title: "Identidade Visual Premium",
+    price: "25.000 AOA / projeto",
+    home: false,
+    rating: "4.8",
+    category: "Design",
+    img: svcUnhas,
+  },
+  {
+    id: "s8",
+    name: "Beat Room Luanda",
+    title: "Mixagem e Masterização",
+    price: "22.000 AOA / faixa",
+    home: false,
+    rating: "5.0",
+    category: "Produção Musical",
     img: svcSpa,
   },
 ];

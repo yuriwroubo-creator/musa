@@ -2,47 +2,72 @@ import { Play, Pause, X, Music } from "lucide-react";
 import { useAudio } from "@/lib/AudioContext";
 
 export function GlobalAudioPlayer() {
-  const { currentTrack, isPlaying, play, pause, toggle, progress } = useAudio();
+  const { currentTrack, currentTrackMeta, isPlaying, pause, toggle, clear, progress } = useAudio();
 
   if (!currentTrack) return null;
 
   return (
-    <div className="fixed bottom-[72px] lg:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-sm z-50">
-      <div className="bg-card/95 backdrop-blur-xl border border-border-soft rounded-2xl shadow-neon-lg overflow-hidden flex flex-col">
-        {/* Progress Bar */}
-        <div className="h-1 w-full bg-secondary">
-          <div 
-            className="h-full bg-primary transition-all duration-100 ease-linear" 
-            style={{ width: `${progress * 100}%` }} 
+    <div className="fixed bottom-[78px] left-1/2 z-50 w-[calc(100%-24px)] max-w-sm -translate-x-1/2 lg:bottom-4">
+      <div className="overflow-hidden rounded-[24px] border border-border-soft bg-card/95 shadow-neon-lg backdrop-blur-2xl">
+        <div className="h-1 w-full bg-secondary/90">
+          <div
+            className="h-full bg-gradient-to-r from-primary via-[#FF6DB0] to-[#FF9EC2] transition-all duration-100 ease-linear"
+            style={{ width: `${Math.max(4, progress * 100)}%` }}
           />
         </div>
-        
-        {/* Controls */}
-        <div className="px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Music className="w-5 h-5 text-primary" />
+
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3 overflow-hidden">
+            <div
+              className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/10"
+              aria-hidden="true"
+            >
+              {currentTrackMeta?.artwork ? (
+                <img src={currentTrackMeta.artwork} alt="" className="size-full object-cover" />
+              ) : (
+                <Music className="size-5 text-primary" />
+              )}
             </div>
-            <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-bold truncate">Música em reprodução</span>
-              <span className="text-xs text-muted-foreground truncate">MUSA Audio</span>
+            <div className="min-w-0">
+              <span className="block truncate text-[13px] font-bold leading-tight">
+                {currentTrackMeta?.title || "Música em reprodução"}
+              </span>
+              <span className="block truncate text-[11px] text-muted-foreground">
+                {currentTrackMeta?.creator || "MUSA Audio"}
+              </span>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button 
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
               onClick={toggle}
-              className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shadow-neon hover:scale-105 transition-transform"
+              className="flex size-10 items-center justify-center rounded-full bg-primary text-white shadow-neon transition-transform hover:scale-105 active:scale-95"
+              aria-label={isPlaying ? "Pausar áudio" : "Reproduzir áudio"}
             >
-              {isPlaying ? <Pause fill="currentColor" className="w-4 h-4" /> : <Play fill="currentColor" className="w-4 h-4 ml-0.5" />}
+              {isPlaying ? (
+                <Pause fill="currentColor" className="size-4" />
+              ) : (
+                <Play fill="currentColor" className="ml-0.5 size-4" />
+              )}
             </button>
-            <button 
-              onClick={() => pause()} // Optionally add a way to clear the track, for now pause is enough
-              className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
+            <button
+              onClick={clear}
+              className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary"
+              aria-label="Fechar áudio"
             >
-              <X className="w-4 h-4" />
+              <X className="size-4" />
             </button>
           </div>
+        </div>
+
+        <div className="flex items-end gap-1 px-4 pb-3">
+          {["h-2.5", "h-4", "h-3", "h-5", "h-2", "h-[18px]", "h-3"].map((height, index) => (
+            <span
+              key={index}
+              className={`w-1 rounded-full bg-primary/80 transition-all duration-300 ${height} ${isPlaying ? "animate-pulse" : "opacity-40"}`}
+              style={{ animationDelay: `${index * 120}ms` }}
+            />
+          ))}
         </div>
       </div>
     </div>

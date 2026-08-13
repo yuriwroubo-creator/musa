@@ -1,10 +1,14 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useRef, useEffect, ReactNode } from "react";
+import type { TrackMeta } from "@/lib/audio.types";
 
 interface AudioContextType {
   currentTrack: string | null;
+  currentTrackMeta: TrackMeta | null;
   isPlaying: boolean;
-  play: (url: string) => void;
+  play: (url: string, meta?: TrackMeta) => void;
   pause: () => void;
+  clear: () => void;
   toggle: () => void;
   progress: number; // 0 to 1
 }
@@ -13,19 +17,20 @@ const AudioContext = createContext<AudioContextType | null>(null);
 
 export function AudioProvider({ children }: { children: ReactNode }) {
   const [currentTrack, setCurrentTrack] = useState<string | null>(null);
+  const [currentTrackMeta, setCurrentTrackMeta] = useState<TrackMeta | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     audioRef.current = new Audio();
-    
+
     const handleTimeUpdate = () => {
       if (audioRef.current && audioRef.current.duration) {
         setProgress(audioRef.current.currentTime / audioRef.current.duration);
       }
     };
-    
+
     const handleEnded = () => {
       setIsPlaying(false);
       setProgress(0);
@@ -48,7 +53,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       if (audioRef.current.src !== currentTrack) {
         audioRef.current.src = currentTrack;
         audioRef.current.load();
-        audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+        audioRef.current
+          .play()
+          .then(() => setIsPlaying(true))
+          .catch(() => setIsPlaying(false));
       } else {
         if (isPlaying) {
           audioRef.current.play().catch(() => setIsPlaying(false));
@@ -59,7 +67,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [currentTrack, isPlaying]);
 
-  const play = (url: string) => {
+  const play = (url: string, meta?: TrackMeta) => {
+    if (meta) setCurrentTrackMeta(meta);
     if (currentTrack === url) {
       setIsPlaying(true);
     } else {
@@ -69,11 +78,33 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const pause = () => setIsPlaying(false);
+  const clear = () => {
+    setIsPlaying(false);
+    setProgress(0);
+    setCurrentTrack(null);
+    setCurrentTrackMeta(null);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.removeAttribute("src");
+      audioRef.current.load();
+    }
+  };
 
   const toggle = () => setIsPlaying((p) => !p);
 
   return (
-    <AudioContext.Provider value={{ currentTrack, isPlaying, play, pause, toggle, progress }}>
+    <AudioContext.Provider
+      value={{
+        currentTrack,
+        currentTrackMeta,
+        isPlaying,
+        play,
+        pause,
+        clear,
+        toggle,
+        progress,
+      }}
+    >
       {children}
     </AudioContext.Provider>
   );

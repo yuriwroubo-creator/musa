@@ -9,19 +9,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAudio } from "@/lib/AudioContext";
 
-export function ProductCard({
-  product,
-  onBuy,
-}: {
-  product: Product;
-  onBuy: () => void;
-}) {
+export function ProductCard({ product, onBuy }: { product: Product; onBuy: () => void }) {
   const { checkIsFavorite, toggleFavorite } = useFavorites();
   const { signInWithGoogle, user } = useAuth();
   const { play, currentTrack, isPlaying, pause } = useAudio();
-  
+
   const isFavorite = checkIsFavorite(product.id);
-  const audioUrl = product.media_urls?.find(url => url.match(/\.(mp3|wav|aac|ogg)$/i));
+  const audioUrl = product.media_urls?.find((url) => url.match(/\.(mp3|wav|aac|ogg)$/i));
   const isThisAudioPlaying = currentTrack === audioUrl && isPlaying;
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
@@ -34,10 +28,14 @@ export function ProductCard({
   };
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-[18px] border border-border-soft bg-card transition-all duration-300 hover:shadow-soft hover:-translate-y-0.5">
+    <article className="group flex flex-col overflow-hidden rounded-[22px] border border-border-soft bg-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-soft">
       <div className="relative aspect-[1/1.15] w-full overflow-hidden">
         <img
-          src={product.img || product.media_urls?.find(u => u.match(/\.(jpg|jpeg|png|webp)$/i)) || "https://placehold.co/400x500/f3f4f6/1f2937?text=MUSA"}
+          src={
+            product.img ||
+            product.media_urls?.find((u) => u.match(/\.(jpg|jpeg|png|webp)$/i)) ||
+            "https://placehold.co/400x500/f3f4f6/1f2937?text=MUSA"
+          }
           alt={product.name}
           loading="lazy"
           className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
@@ -48,20 +46,36 @@ export function ProductCard({
               e.stopPropagation();
               e.preventDefault();
               if (isThisAudioPlaying) pause();
-              else play(audioUrl);
+              else
+                play(audioUrl, {
+                  title: product.name,
+                  creator: product.store,
+                  artwork: product.img,
+                  subtitle: product.category,
+                });
             }}
-            className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors hover:bg-black/20"
+            className={cn(
+              "absolute inset-0 flex items-center justify-center bg-black/10 transition-colors hover:bg-black/20",
+              isThisAudioPlaying && "bg-black/25",
+            )}
           >
-            <div className={cn(
-              "flex size-10 items-center justify-center rounded-full backdrop-blur-md transition-all shadow-neon",
-              isThisAudioPlaying ? "bg-primary text-white" : "bg-white/80 text-primary"
-            )}>
-              <Play fill="currentColor" className={cn("size-4", !isThisAudioPlaying && "ml-0.5")} />
+            <div
+              className={cn(
+                "flex size-11 items-center justify-center rounded-full backdrop-blur-md transition-all shadow-neon",
+                isThisAudioPlaying
+                  ? "bg-primary text-white shadow-neon-lg animate-pulse"
+                  : "bg-white/85 text-primary",
+              )}
+            >
+              <Play
+                fill="currentColor"
+                className={cn("size-[18px]", !isThisAudioPlaying && "ml-0.5")}
+              />
             </div>
           </button>
         )}
         {/* Rating badge */}
-        <span className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-card/90 px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm">
+        <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-card/90 px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm">
           <Star className="size-2.5 fill-primary text-primary" />
           {product.rating}
         </span>
@@ -70,10 +84,13 @@ export function ProductCard({
           onClick={handleFavoriteClick}
           disabled={toggleFavorite.isPending}
           aria-label="Adicionar aos favoritos"
-          className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-card/80 backdrop-blur-sm transition-all active:scale-90"
+          className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-card/80 backdrop-blur-sm transition-all active:scale-90"
         >
           <Heart
-            className={cn("size-3.5 transition-colors", isFavorite ? "fill-primary text-primary" : "text-muted-foreground")}
+            className={cn(
+              "size-3.5 transition-colors",
+              isFavorite ? "fill-primary text-primary" : "text-muted-foreground",
+            )}
           />
         </button>
         {/* Category badge */}
@@ -81,15 +98,15 @@ export function ProductCard({
           {product.category}
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-0.5 px-3 pt-2.5 pb-3">
-        <p className="text-[10px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+      <div className="flex flex-1 flex-col gap-0.5 px-3 pb-3 pt-2.5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
           {product.store}
         </p>
-        <h3 className="text-[13px] leading-snug font-semibold lg:text-sm">{product.name}</h3>
-        <p className="mt-0.5 font-mono text-[12.5px] text-primary font-bold">{product.price}</p>
+        <h3 className="text-[13px] font-semibold leading-snug lg:text-sm">{product.name}</h3>
+        <p className="mt-0.5 font-mono text-[12.5px] font-bold text-primary">{product.price}</p>
         <button
           onClick={onBuy}
-          className="mt-auto w-full rounded-xl bg-primary py-2.5 text-[11.5px] font-bold tracking-wide text-primary-foreground shadow-neon transition-all active:scale-95 hover:shadow-neon-lg"
+          className="mt-auto w-full rounded-xl bg-primary py-2.5 text-[11.5px] font-bold tracking-wide text-primary-foreground shadow-neon transition-all hover:shadow-neon-lg active:scale-95"
         >
           Comprar
         </button>
@@ -98,16 +115,10 @@ export function ProductCard({
   );
 }
 
-export function ServiceCard({
-  service,
-  onBook,
-}: {
-  service: Service;
-  onBook: () => void;
-}) {
+export function ServiceCard({ service, onBook }: { service: Service; onBook: () => void }) {
   const { checkIsFavorite, toggleFavorite } = useFavorites();
   const { signInWithGoogle, user } = useAuth();
-  
+
   const isFavorite = checkIsFavorite(service.id);
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
@@ -120,7 +131,7 @@ export function ServiceCard({
   };
 
   return (
-    <article className="flex items-center gap-3 rounded-[18px] border border-border-soft bg-card p-3 transition-all duration-300 hover:shadow-soft hover:-translate-y-0.5">
+    <article className="flex items-center gap-3 rounded-[22px] border border-border-soft bg-card p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-soft">
       <div className="relative shrink-0">
         <img
           src={service.img}
@@ -164,7 +175,10 @@ export function ServiceCard({
           className="flex size-7 items-center justify-center rounded-full transition-all active:scale-90 hover:bg-secondary"
         >
           <Heart
-            className={cn("size-4 transition-colors", isFavorite ? "fill-primary text-primary" : "text-muted-foreground")}
+            className={cn(
+              "size-4 transition-colors",
+              isFavorite ? "fill-primary text-primary" : "text-muted-foreground",
+            )}
           />
         </button>
         <button
@@ -210,7 +224,7 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
   };
 
   return (
-    <article className="flex flex-col items-center gap-2 rounded-[18px] border border-border-soft bg-card px-3 py-5 text-center transition-all duration-300 hover:shadow-soft hover:-translate-y-0.5">
+    <article className="flex flex-col items-center gap-2 rounded-[22px] border border-border-soft bg-card px-3 py-5 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-soft">
       <div className="relative">
         <img
           src={vendor.img}

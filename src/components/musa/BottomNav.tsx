@@ -22,7 +22,7 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
 
-  const handleNavClick = (item: typeof navItems[0]) => {
+  const handleNavClick = (item: (typeof navItems)[0]) => {
     if (item.action === "sell") {
       onSellClick();
       return;
@@ -41,7 +41,7 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border-soft bg-background/95 backdrop-blur-xl lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border-soft bg-background/80 shadow-[0_-12px_40px_-24px_rgba(255,45,120,0.4)] backdrop-blur-2xl lg:hidden">
       <div className="flex items-center justify-around px-2 py-2 pb-safe">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -53,13 +53,13 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
               key={item.label}
               onClick={() => handleNavClick(item)}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all",
+                "flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 transition-all duration-300",
                 isPublish && "scale-110",
               )}
               aria-label={item.label}
             >
               {isPublish ? (
-                <span className="flex h-11 w-[3.25rem] items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[#FF6DB0] shadow-neon">
+                <span className="flex h-11 w-[3.25rem] items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[#FF6DB0] shadow-neon transition-transform duration-300 active:scale-95">
                   <Icon className="size-5 text-white" strokeWidth={2.2} />
                 </span>
               ) : (
@@ -67,17 +67,22 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
                   <span
                     className={cn(
                       "flex size-9 items-center justify-center rounded-full transition-all duration-300",
-                      isActive ? "bg-primary text-white shadow-neon" : "text-muted-foreground",
+                      isActive
+                        ? "scale-105 bg-primary text-white shadow-neon"
+                        : "text-muted-foreground",
                     )}
                   >
                     <Icon
-                      className="size-[22px]"
+                      className={cn(
+                        "size-[22px] transition-transform duration-300",
+                        isActive && "animate-[pulse_1.6s_ease-in-out_infinite]",
+                      )}
                       strokeWidth={isActive ? 2.5 : 1.8}
                     />
                   </span>
                   <span
                     className={cn(
-                      "text-[9px] font-semibold transition-colors tracking-tight",
+                      "text-[9px] font-semibold tracking-tight transition-colors",
                       isActive ? "text-primary" : "text-muted-foreground/70",
                     )}
                   >

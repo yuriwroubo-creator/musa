@@ -6,16 +6,17 @@ import { createClient } from "@supabase/supabase-js";
 function generateSerialId(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const stamp = Date.now().toString(36).toUpperCase().slice(-6);
-  const random4 = Array.from({ length: 4 }, () =>
-    alphabet[Math.floor(Math.random() * alphabet.length)]
+  const random4 = Array.from(
+    { length: 4 },
+    () => alphabet[Math.floor(Math.random() * alphabet.length)],
   ).join("");
   return `MUSA-${stamp}-${random4}`;
 }
 
 // We create a server-side Supabase client factory
 function getServerSupabase(token?: string) {
-  const url = process.env.VITE_SUPABASE_URL || "";
-  const key = process.env.VITE_SUPABASE_ANON_KEY || "";
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
 
   if (!url || !key) {
     throw new Error("Supabase environment variables are not configured.");
@@ -44,7 +45,7 @@ const publishSchema = z.object({
   user_id: z.string().min(1),
   productType: z.enum(["produto", "servico"]),
   media_urls: z.array(z.string()).optional(),
-})
+});
 
 export const publishItemFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => publishSchema.parse(input))
@@ -57,11 +58,11 @@ export const publishItemFn = createServerFn({ method: "POST" })
           secret: turnstileSecret,
           response: data.turnstileToken,
         });
-        const verify = await fetch(
-          "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-          { method: "POST", body },
-        );
-        const result = await verify.json() as { success: boolean };
+        const verify = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+          method: "POST",
+          body,
+        });
+        const result = (await verify.json()) as { success: boolean };
         if (!result.success) {
           // Fail-open: registar aviso mas NÃO bloquear a publicação
           console.warn("[PUBLISH] Turnstile falhou — a continuar em modo fail-open:", result);
@@ -83,7 +84,10 @@ export const publishItemFn = createServerFn({ method: "POST" })
 
     if (checkVendorError) {
       console.error("[PUBLISH] Erro ao verificar loja existente:", checkVendorError);
-      return { success: false, error: `Falha na Base de Dados ao procurar a loja: ${checkVendorError.message}` };
+      return {
+        success: false,
+        error: `Falha na Base de Dados ao procurar a loja: ${checkVendorError.message}`,
+      };
     }
 
     if (existingVendor) {
@@ -122,7 +126,10 @@ export const publishItemFn = createServerFn({ method: "POST" })
 
       if (vendorError || !newVendor) {
         console.error("[PUBLISH] Erro final ao criar loja:", vendorError);
-        return { success: false, error: `Não foi possível criar a loja: ${vendorError?.message || 'Erro Desconhecido'}` };
+        return {
+          success: false,
+          error: `Não foi possível criar a loja: ${vendorError?.message || "Erro Desconhecido"}`,
+        };
       }
       vendorId = newVendor.id;
     }
@@ -133,17 +140,31 @@ export const publishItemFn = createServerFn({ method: "POST" })
     const todayIso = today.toISOString();
 
     const [productsCountRes, servicesCountRes] = await Promise.all([
-      supabase.from("products").select("id", { count: "exact", head: true }).eq("vendor_id", vendorId).gte("created_at", todayIso),
-      supabase.from("services").select("id", { count: "exact", head: true }).eq("vendor_id", vendorId).gte("created_at", todayIso),
+      supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("vendor_id", vendorId)
+        .gte("created_at", todayIso),
+      supabase
+        .from("services")
+        .select("id", { count: "exact", head: true })
+        .eq("vendor_id", vendorId)
+        .gte("created_at", todayIso),
     ]);
 
     if (productsCountRes.error) {
-       console.error("[PUBLISH] Erro ao contar produtos:", productsCountRes.error);
-       return { success: false, error: `Falha ao verificar limites de publicação: ${productsCountRes.error.message}` };
+      console.error("[PUBLISH] Erro ao contar produtos:", productsCountRes.error);
+      return {
+        success: false,
+        error: `Falha ao verificar limites de publicação: ${productsCountRes.error.message}`,
+      };
     }
     if (servicesCountRes.error) {
-       console.error("[PUBLISH] Erro ao contar serviços:", servicesCountRes.error);
-       return { success: false, error: `Falha ao verificar limites de publicação: ${servicesCountRes.error.message}` };
+      console.error("[PUBLISH] Erro ao contar serviços:", servicesCountRes.error);
+      return {
+        success: false,
+        error: `Falha ao verificar limites de publicação: ${servicesCountRes.error.message}`,
+      };
     }
 
     const totalToday = (productsCountRes.count || 0) + (servicesCountRes.count || 0);
@@ -169,7 +190,10 @@ export const publishItemFn = createServerFn({ method: "POST" })
 
     if (insertError) {
       console.error(`[PUBLISH] Erro ao inserir na tabela ${table}:`, insertError);
-      return { success: false, error: `Falha ao guardar na Base de Dados (${table}): ${insertError.message}` };
+      return {
+        success: false,
+        error: `Falha ao guardar na Base de Dados (${table}): ${insertError.message}`,
+      };
     }
 
     console.log(`[PUBLISH] Sucesso! Item inserido na tabela ${table} para vendor ${vendorId}`);
