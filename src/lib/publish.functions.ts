@@ -31,6 +31,16 @@ function getServerSupabase(token?: string) {
   });
 }
 
+function isSchemaCacheColumnError(error: { code?: string; message?: string; details?: string }, column: string) {
+  const text = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
+  return (
+    error.code === "42703" ||
+    text.includes(`'${column.toLowerCase()}' column`) ||
+    text.includes(`\"${column.toLowerCase()}\" column`) ||
+    text.includes(column.toLowerCase())
+  );
+}
+
 const publishSchema = z.object({
   shopName: z.string().min(1),
   ownerName: z.string().min(1),
@@ -98,62 +108,73 @@ export const publishItemFn = createServerFn({ method: "POST" })
       let vendorError = null;
       for (let attempt = 0; attempt < 3; attempt++) {
         const serial_id = generateSerialId();
-        const primaryVendorPayload = {
-          serial_id,
-          user_id: data.user_id,
-          business_name: data.shopName,
-          full_name: data.ownerName,
-          phone: data.phone,
-          plan: "basic",
-          status: "active",
-        };
-        const fallbackVendorPayload = {
-          serial_id,
-          user_id: data.user_id,
-          full_name: data.shopName,
-          phone: data.phone,
-          plan: "basic",
-          status: "active",
-        };
-        const res = await supabase
-          .from("vendor_subscriptions")
-          .insert(primaryVendorPayload)
-          .select("id")
-          .maybeSingle();
+        const vendorPayloads = [
+          {
+            serial_id,
+            user_id: data.user_id,
+            business_name: data.shopName,
+            full_name: data.ownerName,
+            phone: data.phone,
+            plan: "basic",
+            status: "active",
+          },
+          {
+            serial_id,
+            user_id: data.user_id,
+            full_name: data.ownerName,
+            phone: data.phone,
+            plan: "basic",
+            status: "active",
+          },
+          {
+            serial_id,
+            user_id: data.user_id,
+            business_name: data.shopName,
+            phone: data.phone,
+            plan: "basic",
+            status: "active",
+          },
+          {
+            serial_id,
+            user_id: data.user_id,
+            phone: data.phone,
+            plan: "basic",
+            status: "active",
+          },
+        ];
 
-        if (!res.error) {
-          newVendor = res.data;
-          vendorError = null;
-          break;
-        }
-
-        const missingBusinessName =
-          res.error.message?.toLowerCase().includes("business_name") ||
-          res.error.details?.toLowerCase().includes("business_name") ||
-          res.error.code === "42703";
-
-        if (missingBusinessName) {
-          const fallbackRes = await supabase
+        for (const vendorPayload of vendorPayloads) {
+          const res = await supabase
             .from("vendor_subscriptions")
-            .insert(fallbackVendorPayload)
+            .insert(vendorPayload)
             .select("id")
             .maybeSingle();
 
-          if (!fallbackRes.error) {
-            newVendor = fallbackRes.data;
+          if (!res.error) {
+            newVendor = res.data;
             vendorError = null;
             break;
           }
 
-          vendorError = fallbackRes.error;
-          break;
+          if (res.error.code === "23505") {
+            vendorError = res.error;
+            break;
+          }
+
+          const schemaCacheColumnMismatch =
+            isSchemaCacheColumnError(res.error, "business_name") ||
+            isSchemaCacheColumnError(res.error, "full_name");
+
+          if (!schemaCacheColumnMismatch) {
+            vendorError = res.error;
+            break;
+          }
+
+          vendorError = res.error;
         }
 
-        if (res.error.code !== "23505") {
-          vendorError = res.error;
-          break;
-        }
-        vendorError = res.error;
+        if (newVendor) break;
+        if (vendorError?.code !== "23505") break;
       }
 
       if (vendorError || !newVendor) {
