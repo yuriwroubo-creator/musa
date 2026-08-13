@@ -1,8 +1,14 @@
-import React, { useState, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { Camera, X, Play, Upload, Loader2, Music } from 'lucide-react';
-import { toast } from 'sonner';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Camera, X, Play, Upload, Loader2, Music } from "lucide-react";
+import { toast } from "sonner";
+import {
+  MAX_UPLOAD_FILE_SIZE_BYTES,
+  MAX_UPLOAD_FILE_SIZE_LABEL,
+  MUSA_MEDIA_BUCKET,
+} from "@/lib/storage";
 
 interface MediaUploaderProps {
   onUploadComplete: (urls: string[]) => void;
@@ -13,7 +19,7 @@ interface MediaUploaderProps {
 export const MediaUploader: React.FC<MediaUploaderProps> = ({
   onUploadComplete,
   maxFiles = 5,
-  accept = 'image/*,video/*,audio/*,.mp3,.wav,.aac'
+  accept = "image/*,video/*,audio/*,.mp3,.wav,.aac",
 }) => {
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
@@ -39,12 +45,22 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       return;
     }
 
+    const oversizedFiles = newFiles.filter((file) => file.size > MAX_UPLOAD_FILE_SIZE_BYTES);
+    if (oversizedFiles.length > 0) {
+      toast.error(`Cada ficheiro pode ter no máximo ${MAX_UPLOAD_FILE_SIZE_LABEL}.`);
+      return;
+    }
+
     const validFiles = newFiles.filter(
-      (file) => file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/') || file.name.match(/\.(mp3|wav|aac)$/i)
+      (file) =>
+        file.type.startsWith("image/") ||
+        file.type.startsWith("video/") ||
+        file.type.startsWith("audio/") ||
+        file.name.match(/\.(mp3|wav|aac)$/i),
     );
 
     if (validFiles.length !== newFiles.length) {
-      toast.error('Apenas imagens, vídeos e áudios são suportados.');
+      toast.error("Apenas imagens, vídeos e áudios são suportados.");
     }
 
     setFiles((prev) => [...prev, ...validFiles]);
@@ -52,7 +68,10 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     // Create previews
     const newPreviews = validFiles.map((file) => ({
       url: URL.createObjectURL(file),
-      type: file.type.split('/')[0] === 'audio' || file.name.match(/\.(mp3|wav|aac)$/i) ? 'audio' : file.type.split('/')[0] || 'unknown'
+      type:
+        file.type.split("/")[0] === "audio" || file.name.match(/\.(mp3|wav|aac)$/i)
+          ? "audio"
+          : file.type.split("/")[0] || "unknown",
     }));
     setPreviews((prev) => [...prev, ...newPreviews]);
   };
@@ -81,7 +100,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
 
   const uploadFiles = async () => {
     if (!user) {
-      toast.error('Precisas de iniciar sessão para fazer upload.');
+      toast.error("Precisas de iniciar sessão para fazer upload.");
       return;
     }
     if (files.length === 0) return;
@@ -95,21 +114,21 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
 
       for (const file of files) {
         const timestamp = Date.now();
-        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
         const path = `${user.id}/${timestamp}_${safeName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('musa-media')
+          .from(MUSA_MEDIA_BUCKET)
           .upload(path, file, {
-            cacheControl: '3600',
-            upsert: false
+            cacheControl: "3600",
+            upsert: false,
           });
 
         if (uploadError) {
           throw uploadError;
         }
 
-        const { data } = supabase.storage.from('musa-media').getPublicUrl(path);
+        const { data } = supabase.storage.from(MUSA_MEDIA_BUCKET).getPublicUrl(path);
         if (data?.publicUrl) {
           uploadedUrls.push(data.publicUrl);
         }
@@ -118,17 +137,16 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
         setUploadProgress(Math.round((completedCount / files.length) * 100));
       }
 
-      toast.success('Upload concluído com sucesso! ✨');
+      toast.success("Upload concluído com sucesso! ✨");
       onUploadComplete(uploadedUrls);
-      
+
       // Cleanup
       setFiles([]);
       previews.forEach((p) => URL.revokeObjectURL(p.url));
       setPreviews([]);
-      
     } catch (error: any) {
-      console.error('Upload error:', error);
-      toast.error('Erro ao fazer upload dos ficheiros. Tenta novamente.');
+      console.error("Upload error:", error);
+      toast.error("Erro ao fazer upload dos ficheiros. Tenta novamente.");
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -145,24 +163,26 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
           className={`relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group
-            ${isDragging 
-              ? 'border-primary bg-primary/10' 
-              : 'border-border-soft bg-card hover:border-primary/50 hover:bg-card/80'
+            ${
+              isDragging
+                ? "border-primary bg-primary/10"
+                : "border-border-soft bg-card hover:border-primary/50 hover:bg-card/80"
             }`}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          
+
           <div className="rounded-full bg-secondary/50 p-4 mb-4 group-hover:scale-110 transition-transform">
             <Camera className="w-8 h-8 text-primary" />
           </div>
-          
+
           <p className="text-sm font-medium text-primary-foreground mb-1">
             Arrasta fotos, vídeos ou áudios aqui
           </p>
           <p className="text-xs text-muted-foreground">
-            ou clica para selecionar (máx. {maxFiles})
+            ou clica para selecionar (máx. {maxFiles}, até {MAX_UPLOAD_FILE_SIZE_LABEL} por
+            ficheiro)
           </p>
-          
+
           <input
             ref={fileInputRef}
             type="file"
@@ -179,10 +199,17 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       {previews.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
           {previews.map((preview, index) => (
-            <div key={index} className="relative aspect-square rounded-xl overflow-hidden bg-secondary group border border-border-soft shadow-sm">
-              {preview.type === 'image' ? (
-                <img src={preview.url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-              ) : preview.type === 'audio' ? (
+            <div
+              key={index}
+              className="relative aspect-square rounded-xl overflow-hidden bg-secondary group border border-border-soft shadow-sm"
+            >
+              {preview.type === "image" ? (
+                <img
+                  src={preview.url}
+                  alt={`Preview ${index}`}
+                  className="w-full h-full object-cover"
+                />
+              ) : preview.type === "audio" ? (
                 <div className="w-full h-full flex flex-col items-center justify-center bg-card p-2 text-center">
                   <Music className="w-8 h-8 text-primary mb-1" />
                   <span className="text-[10px] text-muted-foreground truncate w-full">Áudio</span>
@@ -195,11 +222,14 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {!isUploading && (
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile(index);
+                  }}
                   className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
                 >
                   <X className="w-4 h-4" />
@@ -215,13 +245,13 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
         <div className="space-y-3">
           {isUploading && (
             <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300 ease-out"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
           )}
-          
+
           <button
             type="button"
             onClick={uploadFiles}
@@ -231,13 +261,12 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
           >
             {isUploading ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                A fazer upload... {uploadProgress}%
+                <Loader2 className="w-5 h-5 animate-spin" />A fazer upload... {uploadProgress}%
               </>
             ) : (
               <>
                 <Upload className="w-5 h-5" />
-                Fazer Upload de {files.length} {files.length === 1 ? 'ficheiro' : 'ficheiros'}
+                Fazer Upload de {files.length} {files.length === 1 ? "ficheiro" : "ficheiros"}
               </>
             )}
           </button>

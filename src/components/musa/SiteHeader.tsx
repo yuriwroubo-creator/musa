@@ -1,11 +1,21 @@
-import { Menu, Search, ShoppingBag, Heart, User, Sun, Moon, MapPin, LayoutDashboard } from "lucide-react";
+import {
+  Menu,
+  Search,
+  ShoppingBag,
+  Heart,
+  User,
+  Sun,
+  Moon,
+  MapPin,
+  LayoutDashboard,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, Suspense, lazy } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "@tanstack/react-router";
 
 const NotificationCenter = lazy(() =>
-  import("@/components/musa/NotificationCenter").then((m) => ({ default: m.NotificationCenter }))
+  import("@/components/musa/NotificationCenter").then((m) => ({ default: m.NotificationCenter })),
 );
 
 type Props = {
@@ -16,13 +26,7 @@ type Props = {
   onSellClick: () => void;
 };
 
-export function SiteHeader({
-  query,
-  onQueryChange,
-  cartCount,
-  onCartClick,
-  onSellClick,
-}: Props) {
+export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSellClick }: Props) {
   const [dark, setDark] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, signInWithGoogle } = useAuth();
@@ -34,18 +38,23 @@ export function SiteHeader({
 
   // Get user initials for avatar
   const initials = user?.user_metadata?.full_name
-    ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
-    : user?.email?.[0]?.toUpperCase() ?? "?";
+    ? user.user_metadata.full_name
+        .split(" ")
+        .map((n: string) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : (user?.email?.[0]?.toUpperCase() ?? "?");
 
   const avatarUrl = user?.user_metadata?.avatar_url;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border-soft bg-background/85 backdrop-blur-xl">
-      <div className="mx-auto w-full max-w-6xl px-5 pt-3 pb-3 lg:px-8 lg:py-3.5">
+    <header className="sticky top-0 z-40 border-b border-border-soft/70 bg-background/70 backdrop-blur-2xl">
+      <div className="mx-auto w-full max-w-6xl px-5 py-3 lg:px-8 lg:py-3.5">
         <div className="flex items-center justify-between gap-4">
           {/* Mobile menu */}
           <button
-            className="flex size-9 items-center justify-center text-foreground lg:hidden"
+            className="flex size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary lg:hidden"
             aria-label="Menu"
             onClick={() => setMenuOpen((v) => !v)}
           >
@@ -54,12 +63,14 @@ export function SiteHeader({
 
           {/* Logo */}
           <a href="/" className="flex items-center gap-1.5 lg:order-first">
-            <span className="display text-2xl font-black leading-none tracking-[0.04em] text-foreground">MUSA</span>
+            <span className="display text-[1.7rem] font-black leading-none tracking-[0.03em] text-foreground">
+              MUSA
+            </span>
             <span className="neon-text -translate-y-2 text-[13px]">✦</span>
           </a>
 
           {/* Desktop search */}
-          <div className="hidden flex-1 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2.5 lg:flex">
+          <div className="hidden flex-1 items-center gap-3 rounded-full border border-border-soft bg-card/80 px-4 py-2.5 shadow-sm lg:flex">
             <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.8} />
             <input
               value={query}
@@ -81,7 +92,7 @@ export function SiteHeader({
             <button
               onClick={onSellClick}
               id="btn-sell-header"
-              className="mr-1 hidden rounded-xl bg-gradient-to-r from-primary to-[#FF6DB0] px-4 py-2.5 text-xs font-bold text-white shadow-neon transition-all hover:opacity-90 active:scale-95 lg:block"
+              className="mr-1 hidden rounded-full bg-gradient-to-r from-primary to-[#FF6DB0] px-4 py-2.5 text-xs font-bold text-white shadow-neon transition-all hover:opacity-90 active:scale-95 lg:block"
             >
               + Publicar Grátis
             </button>
@@ -108,8 +119,8 @@ export function SiteHeader({
 
             {/* Favorites */}
             <button
-              onClick={() => user ? navigate({ to: "/favoritos" }) : signInWithGoogle()}
-              className="hidden size-9 items-center justify-center text-foreground transition-colors hover:bg-secondary rounded-full lg:flex"
+              onClick={() => (user ? navigate({ to: "/favoritos" }) : signInWithGoogle())}
+              className="hidden size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary lg:flex"
               aria-label="Favoritos"
             >
               <Heart className="size-5" strokeWidth={1.6} />
@@ -133,7 +144,7 @@ export function SiteHeader({
             ) : (
               <button
                 onClick={signInWithGoogle}
-                className="hidden size-9 items-center justify-center text-foreground transition-colors hover:bg-secondary rounded-full lg:flex"
+                className="hidden size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary lg:flex"
                 aria-label="Entrar"
               >
                 <User className="size-5" strokeWidth={1.6} />
@@ -160,7 +171,7 @@ export function SiteHeader({
         </div>
 
         {/* Mobile search */}
-        <div className="mt-3 flex items-center gap-2.5 rounded-2xl border border-border bg-card px-3.5 py-2.5 lg:hidden">
+        <div className="mt-3 flex items-center gap-2.5 rounded-full border border-border-soft bg-card/85 px-3.5 py-2.5 shadow-sm lg:hidden">
           <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.8} />
           <input
             id="mobile-search-input"
@@ -174,10 +185,13 @@ export function SiteHeader({
 
         {/* Mobile menu dropdown */}
         {menuOpen && (
-          <div className="mt-2 rounded-2xl border border-border-soft bg-card p-4 lg:hidden">
+          <div className="mt-2 rounded-[24px] border border-border-soft bg-card p-4 shadow-soft lg:hidden">
             <button
-              onClick={() => { onSellClick(); setMenuOpen(false); }}
-              className="w-full rounded-xl bg-gradient-to-r from-primary to-[#FF6DB0] px-4 py-3 text-sm font-bold text-white shadow-neon"
+              onClick={() => {
+                onSellClick();
+                setMenuOpen(false);
+              }}
+              className="w-full rounded-2xl bg-gradient-to-r from-primary to-[#FF6DB0] px-4 py-3 text-sm font-bold text-white shadow-neon"
             >
               + Publicar Produto/Serviço — Grátis
             </button>
@@ -185,22 +199,31 @@ export function SiteHeader({
               {user ? (
                 <>
                   <button
-                    onClick={() => { navigate({ to: "/dashboard" }); setMenuOpen(false); }}
-                    className="flex flex-col items-center gap-1 rounded-xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                    onClick={() => {
+                      navigate({ to: "/dashboard" });
+                      setMenuOpen(false);
+                    }}
+                    className="flex flex-col items-center gap-1 rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
                   >
                     <LayoutDashboard className="size-4" />
                     Dashboard
                   </button>
                   <button
-                    onClick={() => { navigate({ to: "/favoritos" }); setMenuOpen(false); }}
-                    className="flex flex-col items-center gap-1 rounded-xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                    onClick={() => {
+                      navigate({ to: "/favoritos" });
+                      setMenuOpen(false);
+                    }}
+                    className="flex flex-col items-center gap-1 rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
                   >
                     <Heart className="size-4" />
                     Favoritos
                   </button>
                   <button
-                    onClick={() => { navigate({ to: "/perfil" }); setMenuOpen(false); }}
-                    className="flex flex-col items-center gap-1 rounded-xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                    onClick={() => {
+                      navigate({ to: "/perfil" });
+                      setMenuOpen(false);
+                    }}
+                    className="flex flex-col items-center gap-1 rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
                   >
                     <User className="size-4" />
                     Perfil
@@ -211,7 +234,7 @@ export function SiteHeader({
                   <button
                     key={item}
                     onClick={() => setMenuOpen(false)}
-                    className="rounded-xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                    className="rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
                   >
                     {item}
                   </button>

@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { globalSearch } from "@/lib/algolia";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFollows } from "@/hooks/useFollows";
@@ -13,6 +13,7 @@ import { useSellModal } from "@/lib/SellContext";
 import { products, services, vendors, productCategories, serviceCategories } from "@/lib/musa-data";
 import { cn } from "@/lib/utils";
 import { ShoppingBag } from "lucide-react";
+import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -114,13 +115,13 @@ function Index() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vendor_subscriptions")
-        .select("id, serial_id, full_name, business_name, plan, status")
+        .select("id, serial_id, full_name, plan, status")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       return (data || []).map((vendor) => {
-        const displayName = vendor.business_name || vendor.full_name || vendor.serial_id;
+        const displayName = vendor.full_name || vendor.serial_id;
         const iconText = encodeURIComponent(displayName.split(" ").slice(0, 2).join(" "));
 
         return {
@@ -153,11 +154,7 @@ function Index() {
     return baseVendors.filter((v: any) => followedIds.includes(v.id || v.serial_id));
   }, [baseVendors, follows]);
 
-  const { data: searchResults } = useQuery({
-    queryKey: ["search", q],
-    queryFn: () => globalSearch(q),
-    enabled: q.length > 0,
-  });
+  const { data: searchResults } = useGlobalSearch(query);
 
   const visibleProducts = useMemo(() => {
     if (q !== "") {

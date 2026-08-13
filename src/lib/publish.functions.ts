@@ -98,17 +98,26 @@ export const publishItemFn = createServerFn({ method: "POST" })
       let vendorError = null;
       for (let attempt = 0; attempt < 3; attempt++) {
         const serial_id = generateSerialId();
+        const primaryVendorPayload = {
+          serial_id,
+          user_id: data.user_id,
+          business_name: data.shopName,
+          full_name: data.ownerName,
+          phone: data.phone,
+          plan: "basic",
+          status: "active",
+        };
+        const fallbackVendorPayload = {
+          serial_id,
+          user_id: data.user_id,
+          full_name: data.shopName,
+          phone: data.phone,
+          plan: "basic",
+          status: "active",
+        };
         const res = await supabase
           .from("vendor_subscriptions")
-          .insert({
-            serial_id,
-            user_id: data.user_id,
-            business_name: data.shopName,
-            full_name: data.ownerName,
-            phone: data.phone,
-            plan: "basic",
-            status: "active",
-          })
+          .insert(primaryVendorPayload)
           .select("id")
           .maybeSingle();
 
@@ -117,6 +126,29 @@ export const publishItemFn = createServerFn({ method: "POST" })
           vendorError = null;
           break;
         }
+
+        const missingBusinessName =
+          res.error.message?.toLowerCase().includes("business_name") ||
+          res.error.details?.toLowerCase().includes("business_name") ||
+          res.error.code === "42703";
+
+        if (missingBusinessName) {
+          const fallbackRes = await supabase
+            .from("vendor_subscriptions")
+            .insert(fallbackVendorPayload)
+            .select("id")
+            .maybeSingle();
+
+          if (!fallbackRes.error) {
+            newVendor = fallbackRes.data;
+            vendorError = null;
+            break;
+          }
+
+          vendorError = fallbackRes.error;
+          break;
+        }
+
         if (res.error.code !== "23505") {
           vendorError = res.error;
           break;
