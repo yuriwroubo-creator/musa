@@ -198,10 +198,11 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     <div className="w-full space-y-4">
       {/* Upload Zone */}
       {files.length < maxFiles && (
-        <label
+        <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          onClick={() => !isUploading && fileInputRef.current?.click()}
           className={`relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group
             ${
               isDragging
@@ -235,13 +236,16 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
           />
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={(event) => {
+              event.stopPropagation();
+              fileInputRef.current?.click();
+            }}
             disabled={isUploading}
             className="relative mt-4 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white shadow-neon disabled:opacity-60"
           >
             Selecionar ficheiros
           </button>
-        </label>
+        </div>
       )}
 
       {/* Previews Grid */}

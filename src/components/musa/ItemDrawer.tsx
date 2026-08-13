@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ReviewSection } from "./ReviewSection";
+import { PlaceholderArt } from "@/components/musa/PlaceholderArt";
 
 export type DrawerItem = {
+  item_id?: string;
   kind: "product" | "service";
   img: string;
   title: string;
   price: string;
   vendor_id?: string;
+  vendor_phone?: string;
+  description?: string;
 };
 
 const sizes = ["S", "M", "L", "XL"];
@@ -45,6 +51,33 @@ export function ItemDrawer({
   const isProduct = item?.kind === "product";
   const rowA = isProduct ? sizes : dates;
   const rowB = isProduct ? colors : times;
+  const { data: vendor } = useQuery({
+    queryKey: ["drawer-vendor", item?.vendor_id],
+    enabled: Boolean(item?.vendor_id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vendor_subscriptions")
+        .select("phone, business_name, store_name, full_name")
+        .eq("id", item!.vendor_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const phone = item?.vendor_phone || vendor?.phone;
+  const whatsappPhone = phone
+    ? phone
+        .replace(/\D/g, "")
+        .replace(/^0+/, "")
+        .replace(/^(9\d{8})$/, "244$1")
+    : "";
+  const whatsappUrl =
+    item && whatsappPhone
+      ? `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(
+          `Olá! Tenho interesse em "${item.title}" na MUSA.`,
+        )}`
+      : "";
 
   return (
     <>
@@ -75,13 +108,20 @@ export function ItemDrawer({
         </button>
 
         <div className="flex items-center gap-3 border-b border-border-soft pb-3.5">
-          {item ? (
+          {item?.img ? (
             <img
               src={item.img}
               alt={item.title}
               className="size-13 rounded-xl object-cover"
               style={{ width: 52, height: 52 }}
             />
+          ) : item ? (
+            <div className="size-13 overflow-hidden rounded-xl" style={{ width: 52, height: 52 }}>
+              <PlaceholderArt
+                title={item.title}
+                kind={item.kind === "service" ? "service" : "product"}
+              />
+            </div>
           ) : null}
           <div>
             <p className="text-sm font-bold">{item?.title ?? "—"}</p>
@@ -100,6 +140,17 @@ export function ItemDrawer({
         >
           {isProduct ? "Adicionar ao Carrinho" : "Confirmar Agendamento"}
         </button>
+
+        {whatsappUrl && (
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 flex w-full items-center justify-center rounded-2xl border border-primary/30 bg-accent py-3.5 text-[13px] font-bold text-accent-foreground transition-transform active:scale-[0.98]"
+          >
+            Estou interessado
+          </a>
+        )}
 
         {item?.vendor_id && (
           <div className="mt-8 border-t border-border-soft pt-4">

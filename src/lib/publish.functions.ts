@@ -55,6 +55,43 @@ function isVendorForeignKeyError(error: { code?: string; message?: string }) {
   return error.code === "23503" && text.includes("vendor_id");
 }
 
+const blockedWords = [
+  "sexo",
+  "porn",
+  "porno",
+  "nude",
+  "nudes",
+  "erotico",
+  "erótico",
+  "racista",
+  "racismo",
+  "odio",
+  "ódio",
+  "droga",
+  "drogas",
+  "cocaina",
+  "cocaína",
+  "fraude",
+  "golpe",
+  "arma",
+  "matar",
+  "assassino",
+  "ilegal",
+  "contrabando",
+];
+
+function normalizeModerationText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function hasBlockedWords(...values: string[]) {
+  const text = normalizeModerationText(values.join(" "));
+  return blockedWords.some((word) => text.includes(normalizeModerationText(word)));
+}
+
 const publishSchema = z.object({
   shopName: z.string().min(1),
   ownerName: z.string().min(1),
@@ -69,6 +106,17 @@ const publishSchema = z.object({
   user_id: z.string().min(1),
   productType: z.enum(["produto", "servico"]),
   media_urls: z.array(z.string()).optional(),
+});
+
+const updateItemSchema = z.object({
+  itemId: z.string().min(1),
+  itemType: z.enum(["produto", "servico"]),
+  productName: z.string().min(2).max(120),
+  productPrice: z.string().optional(),
+  productCategory: z.string().max(80).optional(),
+  productDesc: z.string().max(1200).optional(),
+  media_urls: z.array(z.string().url()).max(5).optional(),
+  access_token: z.string().min(1),
 });
 
 export const publishItemFn = createServerFn({ method: "POST" })
@@ -105,6 +153,13 @@ export const publishItemFn = createServerFn({ method: "POST" })
       return {
         success: false,
         error: "Sessão inválida. Inicia sessão novamente antes de publicar.",
+      };
+    }
+
+    if (hasBlockedWords(data.productName, data.productDesc)) {
+      return {
+        success: false,
+        error: "Remove palavras ofensivas, obscenas ou ilegais da publicação.",
       };
     }
 
@@ -304,5 +359,113 @@ export const publishItemFn = createServerFn({ method: "POST" })
     }
 
     console.log(`[PUBLISH] Sucesso! Item inserido na tabela ${table} para vendor ${vendorId}`);
+    return { success: true };
+  });
+
+export const updateItemFn = createServerFn({ method: "POST" })
+  .validator((input: unknown) => updateItemSchema.parse(input))
+  .handler(async ({ data }) => {
+    const supabase = getServerSupabase(data.access_token);
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const authenticatedUserId = authData.user?.id;
+
+    if (authError || !authenticatedUserId) {
+      return {
+        success: false,
+        error: "Sessão inválida. Inicia sessão novamente antes de editar.",
+      };
+    }
+
+    const table = data.itemType === "produto" ? "products" : "services";
+    const { data: existingItem, error: lookupError } = await supabase
+      .from(table)
+      .select("id, vendor_id")
+      .eq("id", data.itemId)
+      .maybeSingle();
+
+    if (lookupError) {
+      return {
+        success: false,
+        error: `Não foi possível encontrar a publicação: ${lookupError.message}`,
+      };
+    }
+
+    if (!existingItem?.vendor_id) {
+      return {
+        success: false,
+        error: "Publicação não encontrada ou sem loja associada.",
+      };
+    }
+
+    const { data: vendor, error: vendorError } = await supabase
+      .from("vendor_subscriptions")
+      .select("id, user_id, vendor_id")
+      .eq("id", existingItem.vendor_id)
+      .maybeSingle();
+
+    if (vendorError) {
+      return {
+        success: false,
+        error: `Não foi possível validar a loja: ${vendorError.message}`,
+      };
+    }
+
+    if (
+      !vendor ||
+      (vendor.user_id !== authenticatedUserId && vendor.vendor_id !== authenticatedUserId)
+    ) {
+      return {
+        success: false,
+        error: "Não tens permissão para editar esta publicação.",
+      };
+    }
+
+    const price = data.productPrice?.trim() ? Number(data.productPrice) : null;
+    if (price !== null && (!Number.isFinite(price) || price <= 0)) {
+      return {
+        success: false,
+        error: "Indica um preço válido em AOA.",
+      };
+    }
+
+    if (hasBlockedWords(data.productName, data.productDesc || "")) {
+      return {
+        success: false,
+        error: "Remove palavras ofensivas, obscenas ou ilegais da publicação.",
+      };
+    }
+
+    const payload = {
+      name: data.productName.trim(),
+      title: data.productName.trim(),
+      description: data.productDesc?.trim() || "",
+      price,
+      price_aoa: price,
+      category: data.productCategory?.trim() || null,
+      media_urls: data.media_urls || [],
+    };
+
+    const { data: updatedItem, error: updateError } = await supabase
+      .from(table)
+      .update(payload)
+      .eq("id", data.itemId)
+      .eq("vendor_id", existingItem.vendor_id)
+      .select("id")
+      .maybeSingle();
+
+    if (updateError) {
+      return {
+        success: false,
+        error: `Falha ao guardar alterações: ${updateError.message}`,
+      };
+    }
+
+    if (!updatedItem) {
+      return {
+        success: false,
+        error: "Nenhuma alteração foi guardada. Confirma a tua sessão e tenta novamente.",
+      };
+    }
+
     return { success: true };
   });

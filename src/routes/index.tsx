@@ -47,6 +47,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Tab = "produtos" | "servicos" | "lojas" | "seguidoras";
+type CartEntry = DrawerItem & { id: string; quantity: number };
 
 const tabs: { id: Tab; label: string; emoji: string }[] = [
   { id: "produtos", label: "Produtos", emoji: "🛍️" },
@@ -133,6 +134,30 @@ function dedupeById<T extends { id?: string; objectID?: string }>(items: T[]) {
   });
 }
 
+function formatDrawerPrice(price: unknown) {
+  if (typeof price === "number") return `${price.toLocaleString("pt-AO")} AOA`;
+  return String(price || "Preço sob consulta");
+}
+
+function getItemImage(item: any) {
+  return (
+    item.img ||
+    item.image_url ||
+    item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
+    ""
+  );
+}
+
+function readStoredCart() {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem("musa-cart") || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function Index() {
   const [tab, setTab] = useState<Tab>("produtos");
   const [prodCat, setProdCat] = useState("Todos");
@@ -140,7 +165,7 @@ function Index() {
   const [query, setQuery] = useState("");
   const [drawerItem, setDrawerItem] = useState<DrawerItem | null>(null);
   const { setSellOpen } = useSellModal();
-  const [cart, setCart] = useState(0);
+  const [cart, setCart] = useState<CartEntry[]>(readStoredCart);
   const [tasteProfile, setTasteProfile] = useState<TasteProfile>(() => getTasteProfile());
   const [tasteOpen, setTasteOpen] = useState(false);
 
@@ -456,7 +481,17 @@ function Index() {
   const confirm = (item: DrawerItem) => {
     setDrawerItem(null);
     if (item.kind === "product") {
-      setCart((c) => c + 1);
+      setCart((current) => {
+        const id = `${item.kind}-${item.item_id || item.title}`;
+        const existing = current.find((entry) => entry.id === id);
+        const next = existing
+          ? current.map((entry) =>
+              entry.id === id ? { ...entry, quantity: entry.quantity + 1 } : entry,
+            )
+          : [...current, { ...item, id, quantity: 1 }];
+        window.localStorage.setItem("musa-cart", JSON.stringify(next));
+        return next;
+      });
       toast.success("Adicionado ao carrinho", { description: item.title });
     } else {
       toast.success("Agendamento confirmado! ✅", { description: item.title });
@@ -499,9 +534,14 @@ function Index() {
       <SiteHeader
         query={query}
         onQueryChange={setQuery}
-        cartCount={cart}
+        cartCount={cart.reduce((total, item) => total + item.quantity, 0)}
         onCartClick={() =>
-          toast(`Carrinho`, { description: `${cart} ${cart === 1 ? "item" : "itens"}` })
+          toast(`Carrinho`, {
+            description:
+              cart.length === 0
+                ? "Ainda não há itens no carrinho."
+                : cart.map((item) => `${item.quantity}x ${item.title}`).join(" · "),
+          })
         }
         onSellClick={() => setSellOpen(true)}
       />
@@ -563,18 +603,24 @@ function Index() {
               recordInteraction(p);
               setDrawerItem({
                 kind: "product",
-                img: p.img || p.image_url,
+                item_id: p.id,
+                img: getItemImage(p),
                 title: p.name,
-                price: p.price,
+                price: formatDrawerPrice(p.price),
+                vendor_id: p.vendor_id,
+                description: p.description,
               });
             }}
             onServiceClick={(s) => {
               recordInteraction(s);
               setDrawerItem({
                 kind: "service",
-                img: s.img || s.image_url,
+                item_id: s.id,
+                img: getItemImage(s),
                 title: s.title || s.name,
-                price: s.price,
+                price: formatDrawerPrice(s.price),
+                vendor_id: s.vendor_id,
+                description: s.description,
               });
             }}
           />
@@ -586,18 +632,24 @@ function Index() {
                 recordInteraction(p);
                 setDrawerItem({
                   kind: "product",
-                  img: p.img || p.image_url,
+                  item_id: p.id,
+                  img: getItemImage(p),
                   title: p.name,
-                  price: p.price,
+                  price: formatDrawerPrice(p.price),
+                  vendor_id: p.vendor_id,
+                  description: p.description,
                 });
               }}
               onServiceClick={(s) => {
                 recordInteraction(s);
                 setDrawerItem({
                   kind: "service",
-                  img: s.img || s.image_url,
+                  item_id: s.id,
+                  img: getItemImage(s),
                   title: s.title || s.name,
-                  price: s.price,
+                  price: formatDrawerPrice(s.price),
+                  vendor_id: s.vendor_id,
+                  description: s.description,
                 });
               }}
             />
@@ -622,9 +674,12 @@ function Index() {
                           recordInteraction(p);
                           setDrawerItem({
                             kind: "product",
-                            img: p.img || p.image_url,
+                            item_id: p.id,
+                            img: getItemImage(p),
                             title: p.name,
-                            price: p.price,
+                            price: formatDrawerPrice(p.price),
+                            vendor_id: p.vendor_id,
+                            description: p.description,
                           });
                         }}
                       />
@@ -660,9 +715,12 @@ function Index() {
                           recordInteraction(s);
                           setDrawerItem({
                             kind: "service",
-                            img: s.img || s.image_url,
+                            item_id: s.id,
+                            img: getItemImage(s),
                             title: s.title || s.name,
-                            price: s.price,
+                            price: formatDrawerPrice(s.price),
+                            vendor_id: s.vendor_id,
+                            description: s.description,
                           });
                         }}
                       />
@@ -923,56 +981,56 @@ function ForYouFeed({
       {items.length === 0 ? (
         <Empty message="O feed Para você vai aparecer aqui quando houver publicações reais." />
       ) : (
-      <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pt-3.5 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
-        {items.map((item: any) =>
-          item._kind === "product" ? (
-            <div key={`feed-product-${item.id}`} className="w-[168px] shrink-0 lg:w-auto">
-              <ProductCard
-                product={{
-                  ...item,
-                  price:
-                    typeof item.price === "number"
-                      ? `${item.price.toLocaleString("pt-AO")} AOA`
-                      : item.price || "Preço sob consulta",
-                  rating: item.rating || "Novo",
-                  store: item.store || item.vendor_name || "Loja",
-                  img:
-                    item.img ||
-                    item.image_url ||
-                    item.media_urls?.find((url: string) =>
-                      /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url),
-                    ) ||
-                    "",
-                }}
-                onBuy={() => onProductClick(item)}
-              />
-            </div>
-          ) : (
-            <div key={`feed-service-${item.id}`} className="w-[280px] shrink-0 lg:w-auto">
-              <ServiceCard
-                service={{
-                  ...item,
-                  title: item.title || item.description || item.name,
-                  price:
-                    typeof item.price === "number"
-                      ? `${item.price.toLocaleString("pt-AO")} AOA`
-                      : item.price || "Preço sob consulta",
-                  home: Boolean(item.home),
-                  rating: item.rating || "Novo",
-                  img:
-                    item.img ||
-                    item.image_url ||
-                    item.media_urls?.find((url: string) =>
-                      /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url),
-                    ) ||
-                    "",
-                }}
-                onBook={() => onServiceClick(item)}
-              />
-            </div>
-          ),
-        )}
-      </div>
+        <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pt-3.5 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
+          {items.map((item: any) =>
+            item._kind === "product" ? (
+              <div key={`feed-product-${item.id}`} className="w-[168px] shrink-0 lg:w-auto">
+                <ProductCard
+                  product={{
+                    ...item,
+                    price:
+                      typeof item.price === "number"
+                        ? `${item.price.toLocaleString("pt-AO")} AOA`
+                        : item.price || "Preço sob consulta",
+                    rating: item.rating || "Novo",
+                    store: item.store || item.vendor_name || "Loja",
+                    img:
+                      item.img ||
+                      item.image_url ||
+                      item.media_urls?.find((url: string) =>
+                        /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url),
+                      ) ||
+                      "",
+                  }}
+                  onBuy={() => onProductClick(item)}
+                />
+              </div>
+            ) : (
+              <div key={`feed-service-${item.id}`} className="w-[280px] shrink-0 lg:w-auto">
+                <ServiceCard
+                  service={{
+                    ...item,
+                    title: item.title || item.description || item.name,
+                    price:
+                      typeof item.price === "number"
+                        ? `${item.price.toLocaleString("pt-AO")} AOA`
+                        : item.price || "Preço sob consulta",
+                    home: Boolean(item.home),
+                    rating: item.rating || "Novo",
+                    img:
+                      item.img ||
+                      item.image_url ||
+                      item.media_urls?.find((url: string) =>
+                        /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url),
+                      ) ||
+                      "",
+                  }}
+                  onBook={() => onServiceClick(item)}
+                />
+              </div>
+            ),
+          )}
+        </div>
       )}
     </section>
   );

@@ -8,6 +8,7 @@ import { useFollows } from "@/hooks/useFollows";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAudio } from "@/lib/AudioContext";
+import { PlaceholderArt } from "@/components/musa/PlaceholderArt";
 
 export function ProductCard({ product, onBuy }: { product: Product; onBuy: () => void }) {
   const { checkIsFavorite, toggleFavorite } = useFavorites();
@@ -40,9 +41,7 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
             className="size-full object-cover transition-transform duration-700 group-hover:scale-[1.07]"
           />
         ) : (
-          <div className="flex size-full items-center justify-center bg-secondary text-[11px] font-black uppercase tracking-[0.08em] text-muted-foreground">
-            MUSA
-          </div>
+          <PlaceholderArt title={product.name} />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/48 via-transparent to-black/14 opacity-80" />
         {audioUrl && (
@@ -155,9 +154,11 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
             className="size-[78px] rounded-[16px] object-cover lg:size-[92px]"
           />
         ) : (
-          <div className="flex size-[78px] items-center justify-center rounded-[16px] bg-secondary text-[10px] font-black uppercase tracking-[0.08em] text-muted-foreground lg:size-[92px]">
-            MUSA
-          </div>
+          <PlaceholderArt
+            title={service.name}
+            kind="service"
+            className="size-[78px] rounded-[16px] lg:size-[92px]"
+          />
         )}
         <span className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-card bg-primary">
           <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />
