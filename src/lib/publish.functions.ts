@@ -89,13 +89,23 @@ export const publishItemFn = createServerFn({ method: "POST" })
     }
 
     const supabase = getServerSupabase(data.access_token);
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const authenticatedUserId = authData.user?.id;
+
+    if (authError || !authenticatedUserId) {
+      console.error("[PUBLISH] Erro ao validar utilizador autenticado:", authError);
+      return {
+        success: false,
+        error: "Sessão inválida. Inicia sessão novamente antes de publicar.",
+      };
+    }
 
     // 2. Obter ou Criar Vendor Subscription
     let vendorId = null;
     const { data: existingVendor, error: checkVendorError } = await supabase
       .from("vendor_subscriptions")
       .select("id")
-      .eq("user_id", data.user_id)
+      .eq("user_id", authenticatedUserId)
       .maybeSingle();
 
     if (checkVendorError) {
@@ -116,7 +126,7 @@ export const publishItemFn = createServerFn({ method: "POST" })
         const serial_id = generateSerialId();
         const baseVendorPayload = {
           serial_id,
-          user_id: data.user_id,
+          user_id: authenticatedUserId,
           plan: "basic",
           status: "active",
         };
