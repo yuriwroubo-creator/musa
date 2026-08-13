@@ -50,6 +50,11 @@ function isOptionalVendorColumnError(error: { code?: string; message?: string; d
   );
 }
 
+function isVendorForeignKeyError(error: { code?: string; message?: string }) {
+  const text = error.message?.toLowerCase() || "";
+  return error.code === "23503" && text.includes("vendor_id");
+}
+
 const publishSchema = z.object({
   shopName: z.string().min(1),
   ownerName: z.string().min(1),
@@ -285,6 +290,13 @@ export const publishItemFn = createServerFn({ method: "POST" })
 
     if (insertError) {
       console.error(`[PUBLISH] Erro ao inserir na tabela ${table}:`, insertError);
+      if (isVendorForeignKeyError(insertError)) {
+        return {
+          success: false,
+          error:
+            "A Base de Dados ainda está a ligar publicações ao perfil antigo em vez da loja. Corre a migração 00010 no Supabase e tenta publicar novamente.",
+        };
+      }
       return {
         success: false,
         error: `Falha ao guardar na Base de Dados (${table}): ${insertError.message}`,
