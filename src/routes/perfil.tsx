@@ -24,6 +24,7 @@ import {
   Bookmark,
   Trash2,
   ImagePlus,
+  X,
 } from "lucide-react";
 import { SiteHeader } from "@/components/musa/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
