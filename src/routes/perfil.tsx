@@ -923,7 +923,6 @@ function EditProfileModal({
             <MediaUploader
               maxFiles={1}
               accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
-              capture="environment"
               onUploadComplete={(urls) => setAvatarUrl(urls[0] || "")}
             />
             {avatarUrl && (

@@ -19,11 +19,20 @@ type VendorRow = {
 };
 
 const storageKey = "musa-onboarding-choice";
+const onboardingWindowDays = 30;
 
 function readStoredChoice(): Choice {
   if (typeof window === "undefined") return null;
   const value = window.localStorage.getItem(storageKey);
   return value === "guest" || value === "creator" ? value : null;
+}
+
+function isFreshAccount(createdAt?: string | null) {
+  if (!createdAt) return false;
+  const created = new Date(createdAt).getTime();
+  if (Number.isNaN(created)) return false;
+  const ageMs = Date.now() - created;
+  return ageMs >= 0 && ageMs <= onboardingWindowDays * 24 * 60 * 60 * 1000;
 }
 
 export function OnboardingGate() {
@@ -71,7 +80,13 @@ export function OnboardingGate() {
     return !vendor.business_name || !vendor.full_name || !vendor.store_photo_url;
   }, [choice, vendor]);
 
+  const onboardingDone = Boolean(
+    user.user_metadata?.musa_onboarding_done || user.user_metadata?.musa_role || readStoredChoice(),
+  );
+  const shouldShowOnboarding = !onboardingDone && isFreshAccount(user.created_at);
+
   if (!mounted || loading || !user) return null;
+  if (!shouldShowOnboarding) return null;
   if (choice === "guest") return null;
   if (choice === "creator" && !creatorNeedsSetup) return null;
 
@@ -88,6 +103,7 @@ export function OnboardingGate() {
         full_name: fullName,
         avatar_url: avatarUrl,
         musa_role: "creator",
+        musa_onboarding_done: true,
       },
     });
 
@@ -150,6 +166,7 @@ export function OnboardingGate() {
       await supabase.auth.updateUser({
         data: {
           musa_role: "guest",
+          musa_onboarding_done: true,
         },
       });
       persistChoice("guest");
@@ -274,7 +291,6 @@ export function OnboardingGate() {
                 <MediaUploader
                   maxFiles={1}
                   accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
-                  capture="environment"
                   onUploadComplete={(urls) => setStorePhotoUrl(urls[0] || "")}
                 />
                 {storePhotoUrl && (
