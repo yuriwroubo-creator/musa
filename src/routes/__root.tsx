@@ -17,6 +17,8 @@ import { AudioProvider } from "@/lib/AudioContext";
 import { BottomNav } from "@/components/musa/BottomNav";
 import { SellModal } from "@/components/musa/SellModal";
 import { GlobalAudioPlayer } from "@/components/musa/GlobalAudioPlayer";
+import { OnboardingGate } from "@/components/musa/OnboardingGate";
+import { MusaAiFab } from "@/components/musa/MusaAiFab";
 
 function NotFoundComponent() {
   return (
@@ -153,6 +155,8 @@ function RootComponent() {
 
           {/* Global Modals and Navigation */}
           <GlobalComponents />
+          <OnboardingGate />
+          <MusaAiFab />
 
           <Toaster position="top-center" />
         </SellProvider>

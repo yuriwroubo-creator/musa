@@ -18,6 +18,12 @@ import {
   User as UserIcon,
   Users,
   Eye,
+  MessageCircle,
+  Shield,
+  UserCog,
+  Bookmark,
+  Trash2,
+  ImagePlus,
 } from "lucide-react";
 import { SiteHeader } from "@/components/musa/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +35,17 @@ import { cn } from "@/lib/utils";
 import { MediaUploader } from "@/components/musa/MediaUploader";
 import { PlaceholderArt } from "@/components/musa/PlaceholderArt";
 import { toast } from "sonner";
-import { updateItemFn } from "@/lib/publish.functions";
+import { deleteItemFn, updateItemFn } from "@/lib/publish.functions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/perfil")({
   component: ProfilePage,
@@ -42,6 +58,8 @@ function ProfilePage() {
   const { setSellOpen } = useSellModal();
   const navigate = useNavigate();
   const [tab, setTab] = useState<ProfileTab>("publicacoes");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const stats = useVendorStats();
 
   useEffect(() => {
@@ -106,7 +124,8 @@ function ProfilePage() {
               </div>
               <button
                 aria-label="Definições"
-                className="mb-2 flex size-10 items-center justify-center rounded-full bg-white/12 text-white backdrop-blur"
+                onClick={() => setSettingsOpen(true)}
+                className="mb-2 flex size-10 items-center justify-center rounded-full bg-white/12 text-white backdrop-blur transition hover:bg-white/18"
               >
                 <Settings className="size-5" />
               </button>
@@ -172,7 +191,7 @@ function ProfilePage() {
             active={tab === "atividade"}
             onClick={() => setTab("atividade")}
             icon={<Bell className="size-4" />}
-            label="Atividade"
+            label="Actividades"
           />
           <ProfileTabButton
             active={tab === "estatisticas"}
@@ -190,6 +209,39 @@ function ProfilePage() {
           {tab === "estatisticas" && <ProfileStats stats={stats} />}
         </section>
       </main>
+
+      <ProfileSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onEditProfile={() => {
+          setSettingsOpen(false);
+          setEditProfileOpen(true);
+        }}
+        onOpenStats={() => {
+          setSettingsOpen(false);
+          setTab("estatisticas");
+        }}
+        onOpenActivity={() => {
+          setSettingsOpen(false);
+          setTab("atividade");
+        }}
+        onOpenSaved={() => {
+          setSettingsOpen(false);
+          navigate({ to: "/favoritos" });
+        }}
+        onOpenMessages={() => {
+          setSettingsOpen(false);
+          navigate({ to: "/mensagens" });
+        }}
+      />
+
+      <EditProfileModal
+        open={editProfileOpen}
+        onClose={() => setEditProfileOpen(false)}
+        currentName={fullName}
+        currentAvatarUrl={avatarUrl || ""}
+        userId={user.id}
+      />
     </div>
   );
 }
@@ -247,6 +299,9 @@ function ProfileListings({
   onCreate: () => void;
 }) {
   const [editing, setEditing] = useState<any | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["profile-listings", vendorId],
     enabled: !!vendorId,
@@ -261,6 +316,37 @@ function ProfileListings({
         (a: any, b: any) =>
           new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
       );
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (item: any) => {
+      if (!session?.access_token) {
+        throw new Error("Sessão inválida.");
+      }
+      const result = await deleteItemFn({
+        data: {
+          itemId: item.id,
+          itemType: item.kind === "Serviço" ? "servico" : "produto",
+          access_token: session.access_token,
+        },
+      });
+      if (!result.success) throw new Error(result.error || "Não foi possível apagar.");
+      if ("warning" in result && result.warning) {
+        toast.warning("Publicação apagada com aviso", { description: result.warning });
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["profile-listings", vendorId] });
+      await queryClient.invalidateQueries({ queryKey: ["products_with_views"] });
+      await queryClient.invalidateQueries({ queryKey: ["services"] });
+      toast.success("Publicação apagada.");
+      setDeleteTarget(null);
+    },
+    onError: (error: any) => {
+      toast.error("Não foi possível apagar", {
+        description: error?.message || "Tenta novamente.",
+      });
     },
   });
 
@@ -310,14 +396,24 @@ function ProfileListings({
                 <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold text-accent-foreground">
                   {item.kind}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setEditing(item)}
-                  className="flex size-7 items-center justify-center rounded-full bg-secondary text-muted-foreground transition hover:text-foreground"
-                  aria-label={`Editar ${item.name}`}
-                >
-                  <Pencil className="size-3.5" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(item)}
+                    className="flex size-7 items-center justify-center rounded-full bg-secondary text-muted-foreground transition hover:text-foreground"
+                    aria-label={`Editar ${item.name}`}
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(item)}
+                    className="flex size-7 items-center justify-center rounded-full bg-destructive/10 text-destructive transition hover:bg-destructive hover:text-white"
+                    aria-label={`Apagar ${item.name}`}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
               </div>
               <h3 className="mt-2 line-clamp-2 min-h-[34px] text-xs font-black">{item.name}</h3>
               <p className="mt-1 font-mono text-[11px] font-bold text-primary">
@@ -328,6 +424,34 @@ function ProfileListings({
         );
       })}
       <EditListingModal item={editing} vendorId={vendorId} onClose={() => setEditing(null)} />
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent className="rounded-[24px] border-border-soft bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar esta publicação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação remove a publicação da loja. Se houver ficheiros no bucket público, vamos
+              tentar removê-los também.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                if (deleteTarget) {
+                  deleteMutation.mutate(deleteTarget);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "A apagar..." : "Apagar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -572,6 +696,251 @@ function LoadingTiles() {
       {Array.from({ length: 4 }).map((_, index) => (
         <div key={index} className="h-48 animate-pulse rounded-[20px] bg-muted" />
       ))}
+    </div>
+  );
+}
+
+function ProfileSettingsSheet({
+  open,
+  onClose,
+  onEditProfile,
+  onOpenStats,
+  onOpenActivity,
+  onOpenSaved,
+  onOpenMessages,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onEditProfile: () => void;
+  onOpenStats: () => void;
+  onOpenActivity: () => void;
+  onOpenSaved: () => void;
+  onOpenMessages: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "fixed inset-0 z-[100] transition-opacity duration-300",
+        open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+      )}
+      aria-hidden={!open}
+    >
+      <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className={cn(
+          "absolute bottom-0 left-0 right-0 rounded-t-[28px] border-t border-border-soft bg-card px-5 pb-6 pt-4 shadow-[0_-24px_60px_rgba(0,0,0,.2)] transition-transform duration-300 sm:left-1/2 sm:bottom-6 sm:w-full sm:max-w-xl sm:-translate-x-1/2 sm:rounded-[28px]",
+          open ? "translate-y-0" : "translate-y-full sm:translate-y-[calc(100%+24px)]",
+        )}
+      >
+        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-border sm:hidden" />
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase text-accent-foreground">
+              <Settings className="size-3.5" />
+              Definições
+            </p>
+            <h3 className="mt-3 text-2xl font-black">Ajusta a tua conta</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex size-9 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          <SettingsAction
+            icon={<UserCog className="size-4" />}
+            title="Editar Perfil"
+            description="Atualiza nome, foto e detalhes da conta."
+            onClick={onEditProfile}
+          />
+          <SettingsAction
+            icon={<BarChart3 className="size-4" />}
+            title="Estatísticas da Loja"
+            description="Vê o desempenho das tuas publicações."
+            onClick={onOpenStats}
+          />
+          <SettingsAction
+            icon={<Bell className="size-4" />}
+            title="Actividades"
+            description="Abre o histórico de alertas e interações."
+            onClick={onOpenActivity}
+          />
+          <SettingsAction
+            icon={<Bookmark className="size-4" />}
+            title="Guardados"
+            description="Abre os favoritos e itens guardados."
+            onClick={onOpenSaved}
+          />
+          <SettingsAction
+            icon={<MessageCircle className="size-4" />}
+            title="Mensagens"
+            description="Vai para as tuas conversas e chats."
+            onClick={onOpenMessages}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsAction({
+  icon,
+  title,
+  description,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-3 rounded-[22px] border border-border-soft bg-background px-4 py-4 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft"
+    >
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-black">{title}</span>
+        <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{description}</span>
+      </span>
+    </button>
+  );
+}
+
+function EditProfileModal({
+  open,
+  onClose,
+  currentName,
+  currentAvatarUrl,
+  userId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  currentName: string;
+  currentAvatarUrl: string;
+  userId: string;
+}) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState(currentName);
+  const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(currentName);
+    setAvatarUrl(currentAvatarUrl);
+  }, [open, currentName, currentAvatarUrl]);
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error("Escreve um nome válido.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await supabase.auth.updateUser({
+        data: {
+          full_name: name.trim(),
+          avatar_url: avatarUrl || undefined,
+        },
+      });
+
+      await supabase
+        .from("profiles")
+        .update({
+          full_name: name.trim(),
+          avatar_url: avatarUrl || null,
+        })
+        .eq("id", userId);
+
+      await queryClient.invalidateQueries({ queryKey: ["profile", userId] });
+      toast.success("Perfil atualizado.");
+      onClose();
+    } catch (error: any) {
+      toast.error("Não foi possível atualizar o perfil.", {
+        description: error?.message || "Tenta novamente.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "fixed inset-0 z-[105] flex items-end justify-center bg-black/45 px-3 pb-3 backdrop-blur-sm transition-opacity duration-300 sm:items-center sm:p-5",
+        open ? "opacity-100" : "pointer-events-none opacity-0",
+      )}
+      aria-hidden={!open}
+    >
+      <div
+        className={cn(
+          "w-full max-w-xl rounded-[28px] border border-border-soft bg-card p-5 shadow-luxe transition-transform duration-300",
+          open ? "translate-y-0" : "translate-y-full sm:translate-y-8",
+        )}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase text-accent-foreground">
+              <UserCog className="size-3.5" />
+              Editar Perfil
+            </p>
+            <h3 className="mt-3 text-2xl font-black">Atualiza os teus dados</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex size-9 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <div>
+            <label className="mb-1.5 block px-1 text-[11.5px] font-bold text-muted-foreground">
+              Nome de perfil
+            </label>
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="w-full rounded-xl border border-border-soft bg-background px-4 py-3 text-[13.5px] font-medium outline-none focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center gap-2 px-1 text-[11.5px] font-bold text-muted-foreground">
+              <ImagePlus className="size-3.5" />
+              Foto de perfil
+            </div>
+            <MediaUploader
+              maxFiles={1}
+              accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
+              capture="environment"
+              onUploadComplete={(urls) => setAvatarUrl(urls[0] || "")}
+            />
+            {avatarUrl && (
+              <div className="mt-3 overflow-hidden rounded-2xl border border-border-soft">
+                <img src={avatarUrl} alt="Avatar" className="h-40 w-full object-cover" />
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex w-full items-center justify-center rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-primary-foreground shadow-neon disabled:opacity-60"
+          >
+            {saving ? "A guardar..." : "Guardar alterações"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

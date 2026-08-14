@@ -17,16 +17,16 @@ export interface VendorRegistrationInput {
   phone: string;
   email?: string;
   business_name?: string;
+  store_photo_url?: string | null;
   plan?: string;
+  status?: string;
 }
 
 /**
  * Regista uma vendedora em `vendor_subscriptions` com serial_id único.
  * Em caso de colisão do serial_id (unique violation) tenta novamente.
  */
-export async function registerVendor(
-  input: VendorRegistrationInput,
-): Promise<VendorSubscription> {
+export async function registerVendor(input: VendorRegistrationInput): Promise<VendorSubscription> {
   const { data: userData } = await supabase.auth.getUser();
 
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -40,8 +40,9 @@ export async function registerVendor(
         phone: input.phone,
         email: input.email ?? userData.user?.email ?? null,
         business_name: input.business_name ?? null,
+        store_photo_url: input.store_photo_url ?? null,
         plan: input.plan ?? "basic",
-        status: "pending",
+        status: input.status ?? "pending",
       })
       .select("*")
       .single();

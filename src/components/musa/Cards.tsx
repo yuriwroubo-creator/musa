@@ -1,7 +1,6 @@
 import { Star, Check, MapPin, Heart, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Product, Service, Vendor } from "@/lib/musa-data";
-import { useState } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
 import { useFollows } from "@/hooks/useFollows";
@@ -10,12 +9,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAudio } from "@/lib/AudioContext";
 import { PlaceholderArt } from "@/components/musa/PlaceholderArt";
 
-export function ProductCard({ product, onBuy }: { product: Product; onBuy: () => void }) {
+function formatPrice(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return `${value.toLocaleString("pt-AO")} AOA`;
+  }
+  if (typeof value === "string" && value.trim()) return value;
+  return "Preço sob consulta";
+}
+
+export function ProductCard({
+  product,
+  onBuy,
+  onDetails,
+}: {
+  product: Product & { vendor_id?: string | null; description?: string | null };
+  onBuy: () => void;
+  onDetails?: () => void;
+}) {
   const { checkIsFavorite, toggleFavorite } = useFavorites();
   const { signInWithGoogle, user } = useAuth();
   const { play, currentTrack, isPlaying, pause } = useAudio();
+  const { checkIsFollowing, toggleFollow } = useFollows();
 
   const isFavorite = checkIsFavorite(product.id);
+  const isFollowing = product.vendor_id ? checkIsFollowing(product.vendor_id) : false;
   const audioUrl = product.media_urls?.find((url) => url.match(/\.(mp3|wav|aac|ogg)$/i));
   const imageUrl =
     product.img || product.media_urls?.find((u) => u.match(/\.(jpg|jpeg|png|webp)$/i));
@@ -28,6 +45,16 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
       return;
     }
     toggleFavorite.mutate({ itemId: product.id, itemType: "product", isFavorite });
+  };
+
+  const handleFollowClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!product.vendor_id) return;
+    if (!user) {
+      signInWithGoogle();
+      return;
+    }
+    toggleFollow.mutate({ followingId: product.vendor_id, isFollowing });
   };
 
   return (
@@ -78,12 +105,10 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
             </div>
           </button>
         )}
-        {/* Rating badge */}
         <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/88 px-2 py-1 text-[10px] font-bold text-foreground backdrop-blur-sm">
           <Star className="size-2.5 fill-primary text-primary" />
           {product.rating}
         </span>
-        {/* Wishlist button */}
         <button
           onClick={handleFavoriteClick}
           disabled={toggleFavorite.isPending}
@@ -97,7 +122,21 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
             )}
           />
         </button>
-        {/* Category badge */}
+        {product.vendor_id && (
+          <button
+            onClick={handleFollowClick}
+            disabled={toggleFollow.isPending}
+            aria-label="Seguir a loja"
+            className={cn(
+              "absolute left-2 top-11 flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold backdrop-blur-sm transition-all",
+              isFollowing
+                ? "bg-primary text-primary-foreground shadow-neon"
+                : "bg-white/82 text-foreground shadow-sm hover:scale-[1.02]",
+            )}
+          >
+            {isFollowing ? "A seguir" : "Seguir"}
+          </button>
+        )}
         <span className="absolute bottom-2 left-2 rounded-full bg-white/16 px-2.5 py-1 text-[9.5px] font-bold text-white backdrop-blur-md">
           {product.category}
         </span>
@@ -110,27 +149,47 @@ export function ProductCard({ product, onBuy }: { product: Product; onBuy: () =>
           {product.name}
         </h3>
         <div className="mt-0.5 flex items-center justify-between gap-2">
-          <p className="font-mono text-[12.5px] font-bold text-primary">{product.price}</p>
+          <p className="font-mono text-[12.5px] font-bold text-primary">
+            {formatPrice(product.price)}
+          </p>
           <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold text-accent-foreground">
             Trend
           </span>
         </div>
-        <button
-          onClick={onBuy}
-          className="sheen mt-auto w-full rounded-xl bg-foreground py-2.5 text-[11.5px] font-bold tracking-wide text-background shadow-soft transition-all hover:bg-primary hover:text-primary-foreground active:scale-95"
-        >
-          Comprar
-        </button>
+        <div className="mt-auto grid grid-cols-2 gap-2">
+          <button
+            onClick={onBuy}
+            className="sheen rounded-xl bg-foreground py-2.5 text-[11.5px] font-bold tracking-wide text-background shadow-soft transition-all hover:bg-primary hover:text-primary-foreground active:scale-95"
+          >
+            Comprar
+          </button>
+          <button
+            onClick={onDetails || onBuy}
+            className="rounded-xl border border-border-soft bg-card py-2.5 text-[11.5px] font-bold tracking-wide text-foreground transition-all hover:border-primary/35 hover:bg-accent active:scale-95"
+          >
+            Ver mais
+          </button>
+        </div>
       </div>
     </article>
   );
 }
 
-export function ServiceCard({ service, onBook }: { service: Service; onBook: () => void }) {
+export function ServiceCard({
+  service,
+  onBook,
+  onDetails,
+}: {
+  service: Service & { vendor_id?: string | null; description?: string | null };
+  onBook: () => void;
+  onDetails?: () => void;
+}) {
   const { checkIsFavorite, toggleFavorite } = useFavorites();
   const { signInWithGoogle, user } = useAuth();
+  const { checkIsFollowing, toggleFollow } = useFollows();
 
   const isFavorite = checkIsFavorite(service.id);
+  const isFollowing = service.vendor_id ? checkIsFollowing(service.vendor_id) : false;
   const imageUrl =
     service.img || service.media_urls?.find((u) => u.match(/\.(jpg|jpeg|png|webp)$/i));
 
@@ -141,6 +200,16 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
       return;
     }
     toggleFavorite.mutate({ itemId: service.id, itemType: "service", isFavorite });
+  };
+
+  const handleFollowClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!service.vendor_id) return;
+    if (!user) {
+      signInWithGoogle();
+      return;
+    }
+    toggleFollow.mutate({ followingId: service.vendor_id, isFollowing });
   };
 
   return (
@@ -174,7 +243,9 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
         </div>
         <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{service.title}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <span className="font-mono text-[12px] font-bold text-primary">{service.price}</span>
+          <span className="font-mono text-[12px] font-bold text-primary">
+            {formatPrice(service.price)}
+          </span>
           <span
             className={cn(
               "flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-bold",
@@ -188,7 +259,7 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
           </span>
         </div>
       </div>
-      <div className="flex h-[78px] shrink-0 flex-col items-end justify-between lg:h-[92px]">
+      <div className="flex h-[78px] shrink-0 flex-col items-end gap-2 lg:h-[92px]">
         <button
           onClick={handleFavoriteClick}
           disabled={toggleFavorite.isPending}
@@ -202,23 +273,44 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: () 
             )}
           />
         </button>
-        <button
-          onClick={onBook}
-          className="sheen rounded-xl bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground shadow-neon transition-all hover:shadow-neon-lg active:scale-95"
-        >
-          Agendar
-        </button>
+        {service.vendor_id && (
+          <button
+            onClick={handleFollowClick}
+            disabled={toggleFollow.isPending}
+            className={cn(
+              "rounded-full px-2.5 py-1 text-[9.5px] font-bold transition-all",
+              isFollowing
+                ? "bg-primary text-primary-foreground shadow-neon"
+                : "bg-secondary text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {isFollowing ? "A seguir" : "Seguir"}
+          </button>
+        )}
+        <div className="mt-auto grid w-full gap-1.5">
+          <button
+            onClick={onBook}
+            className="sheen rounded-xl bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground shadow-neon transition-all hover:shadow-neon-lg active:scale-95"
+          >
+            Agendar
+          </button>
+          <button
+            onClick={onDetails || onBook}
+            className="rounded-xl border border-border-soft bg-card px-4 py-2 text-[11px] font-bold text-foreground transition-all hover:border-primary/35 hover:bg-accent active:scale-95"
+          >
+            Ver mais
+          </button>
+        </div>
       </div>
     </article>
   );
 }
 
-export function VendorCard({ vendor }: { vendor: Vendor }) {
+export function VendorCard({ vendor }: { vendor: Vendor & { store_photo_url?: string | null } }) {
   const { checkIsFollowing, toggleFollow } = useFollows();
   const { signInWithGoogle, user } = useAuth();
   const isFollowing = checkIsFollowing(vendor.id);
 
-  // Fetch follower count
   const { data: followerCount = 0 } = useQuery({
     queryKey: ["vendor_followers", vendor.id],
     queryFn: async () => {
@@ -246,9 +338,9 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
   return (
     <article className="luxe-card animate-rise flex flex-col items-center gap-2 rounded-[22px] px-3 py-5 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
       <div className="relative">
-        {vendor.img ? (
+        {vendor.img || vendor.store_photo_url ? (
           <img
-            src={vendor.img}
+            src={vendor.img || vendor.store_photo_url || ""}
             alt={vendor.name}
             loading="lazy"
             className="size-[64px] rounded-full border-[3px] border-accent object-cover shadow-soft lg:size-[72px]"
@@ -265,7 +357,7 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
       <div>
         <h3 className="text-[12.5px] font-bold">{vendor.name}</h3>
         <p className="text-[10.5px] text-muted-foreground">{vendor.cat}</p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">
+        <p className="mt-0.5 text-[10px] text-muted-foreground">
           {followerCount} {followerCount === 1 ? "seguidora" : "seguidoras"}
         </p>
       </div>

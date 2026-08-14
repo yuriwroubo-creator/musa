@@ -126,8 +126,22 @@ export function ItemDrawer({
           <div>
             <p className="text-sm font-bold">{item?.title ?? "—"}</p>
             <p className="mt-0.5 font-mono text-xs text-primary-deep">{item?.price ?? "—"}</p>
+            {vendor && (
+              <p className="mt-1 text-[11px] font-medium text-muted-foreground">
+                {vendor.business_name || vendor.full_name || "Loja MUSA"}
+              </p>
+            )}
           </div>
         </div>
+
+        {item?.description && (
+          <div className="mt-4 rounded-2xl border border-border-soft bg-secondary/50 p-4">
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+              Detalhes
+            </p>
+            <p className="mt-2 text-sm leading-6 text-foreground/90">{item.description}</p>
+          </div>
+        )}
 
         <Label>{isProduct ? "Tamanho" : "Data"}</Label>
         <Swatches options={rowA} selected={optA} onSelect={setOptA} />

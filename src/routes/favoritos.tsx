@@ -20,7 +20,7 @@ function FavoritesPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { favorites, isLoading: loadingFavorites } = useFavorites();
-  
+
   const [drawerItem, setDrawerItem] = useState<DrawerItem | null>(null);
   const [sellOpen, setSellOpen] = useState(false);
   const [tab, setTab] = useState<"produtos" | "servicos">("produtos");
@@ -38,10 +38,7 @@ function FavoritesPage() {
     queryKey: ["favorite_products", productIds],
     queryFn: async () => {
       if (productIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .in("id", productIds);
+      const { data, error } = await supabase.from("products").select("*").in("id", productIds);
       if (error) throw error;
       return data;
     },
@@ -52,10 +49,7 @@ function FavoritesPage() {
     queryKey: ["favorite_services", serviceIds],
     queryFn: async () => {
       if (serviceIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("services")
-        .select("*")
-        .in("id", serviceIds);
+      const { data, error } = await supabase.from("services").select("*").in("id", serviceIds);
       if (error) throw error;
       return data;
     },
@@ -67,7 +61,7 @@ function FavoritesPage() {
   }
 
   const isLoadingData = loadingFavorites || loadingProducts || loadingServices;
-  
+
   const confirm = (item: DrawerItem) => {
     setDrawerItem(null);
     if (item.kind === "product") {
@@ -128,11 +122,19 @@ function FavoritesPage() {
           <EmptyState message="Ainda não tens produtos guardados nos favoritos." />
         ) : tab === "produtos" && favoriteProducts.length > 0 ? (
           <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-            {favoriteProducts.map((p: any) => (
+            {favoriteProducts.map((p) => (
               <ProductCard
                 key={p.id}
                 product={p}
                 onBuy={() =>
+                  setDrawerItem({
+                    kind: "product",
+                    img: p.img || p.image_url,
+                    title: p.name,
+                    price: p.price,
+                  })
+                }
+                onDetails={() =>
                   setDrawerItem({
                     kind: "product",
                     img: p.img || p.image_url,
@@ -147,11 +149,19 @@ function FavoritesPage() {
           <EmptyState message="Ainda não tens serviços guardados nos favoritos." />
         ) : tab === "servicos" && favoriteServices.length > 0 ? (
           <div className="grid gap-3 pt-3.5 lg:grid-cols-2 lg:gap-4">
-            {favoriteServices.map((s: any) => (
+            {favoriteServices.map((s) => (
               <ServiceCard
                 key={s.id}
                 service={s}
                 onBook={() =>
+                  setDrawerItem({
+                    kind: "service",
+                    img: s.img || s.image_url,
+                    title: s.title || s.name,
+                    price: s.price,
+                  })
+                }
+                onDetails={() =>
                   setDrawerItem({
                     kind: "service",
                     img: s.img || s.image_url,
@@ -165,11 +175,7 @@ function FavoritesPage() {
         ) : null}
       </main>
 
-      <ItemDrawer
-        item={drawerItem}
-        onClose={() => setDrawerItem(null)}
-        onConfirm={confirm}
-      />
+      <ItemDrawer item={drawerItem} onClose={() => setDrawerItem(null)} onConfirm={confirm} />
       <SellModal open={sellOpen} onClose={() => setSellOpen(false)} />
     </div>
   );

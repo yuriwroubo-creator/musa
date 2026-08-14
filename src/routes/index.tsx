@@ -139,6 +139,20 @@ function formatDrawerPrice(price: unknown) {
   return String(price || "Preço sob consulta");
 }
 
+function parseMoney(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const text = String(value ?? "");
+  const match = text.replace(/\s/g, "").match(/(\d[\d.,]*)/);
+  if (!match) return 0;
+  const normalized = match[1].replace(/\./g, "").replace(/,/g, ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatMoney(value: number) {
+  return `${value.toLocaleString("pt-AO")} AOA`;
+}
+
 function getItemImage(item: any) {
   return (
     item.img ||
@@ -164,6 +178,7 @@ function Index() {
   const [svcCat, setSvcCat] = useState("Todos");
   const [query, setQuery] = useState("");
   const [drawerItem, setDrawerItem] = useState<DrawerItem | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
   const { setSellOpen } = useSellModal();
   const [cart, setCart] = useState<CartEntry[]>(readStoredCart);
   const [tasteProfile, setTasteProfile] = useState<TasteProfile>(() => getTasteProfile());
@@ -228,7 +243,7 @@ function Index() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vendor_subscriptions")
-        .select("id, serial_id, full_name, plan, status")
+        .select("id, serial_id, full_name, business_name, store_photo_url, plan, status")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -238,9 +253,11 @@ function Index() {
 
         return {
           id: vendor.id,
-          name: displayName,
+          name: vendor.business_name || displayName,
           cat: vendor.plan || vendor.status || "Loja",
-          img: "",
+          img: vendor.store_photo_url || "",
+          business_name: vendor.business_name || "",
+          full_name: vendor.full_name || "",
         };
       });
     },
@@ -288,6 +305,92 @@ function Index() {
     const followedIds = follows.map((f) => f.following_id);
     return baseVendors.filter((v: any) => followedIds.includes(v.id || v.serial_id));
   }, [baseVendors, follows]);
+
+  const vendorCatalog = useMemo(() => {
+    const scored = new Map<
+      string,
+      {
+        vendor: any;
+        score: number;
+      }
+    >();
+
+    const addScore = (vendor: any, score: number, fallbackName: string) => {
+      const vendorId = vendor?.id || vendor?.serial_id;
+      if (!vendorId) return;
+
+      const current = scored.get(vendorId);
+      const nextVendor = current?.vendor || vendor;
+      const nextScore = (current?.score || 0) + score;
+
+      scored.set(vendorId, {
+        vendor: {
+          ...nextVendor,
+          id: vendorId,
+          name: vendor?.name || vendor?.business_name || vendor?.full_name || fallbackName,
+          cat: vendor?.cat || vendor?.plan || vendor?.status || "Loja",
+          img: vendor?.img || vendor?.store_photo_url || "",
+        },
+        score: nextScore,
+      });
+    };
+
+    for (const vendor of baseVendors) {
+      addScore(vendor, 1, vendor.name || "Loja");
+    }
+
+    for (const product of baseProducts) {
+      if (!product.vendor_id) continue;
+      const vendor = baseVendors.find(
+        (item: any) => item.id === product.vendor_id || item.serial_id === product.vendor_id,
+      );
+      const score =
+        scoreCatalogItem(product, tasteProfile, query) +
+        (q && searchScore(product, query) ? searchScore(product, query) / 8 : 0);
+      addScore(
+        vendor || { id: product.vendor_id, name: product.store || "Loja" },
+        score,
+        product.store || "Loja",
+      );
+    }
+
+    for (const service of baseServices) {
+      if (!service.vendor_id) continue;
+      const vendor = baseVendors.find(
+        (item: any) => item.id === service.vendor_id || item.serial_id === service.vendor_id,
+      );
+      const score =
+        scoreCatalogItem(service, tasteProfile, query) +
+        (q && searchScore(service, query) ? searchScore(service, query) / 8 : 0);
+      addScore(
+        vendor || { id: service.vendor_id, name: service.name || "Loja" },
+        score,
+        service.name || "Loja",
+      );
+    }
+
+    return Array.from(scored.values())
+      .sort((a, b) => b.score - a.score)
+      .map((entry) => entry.vendor);
+  }, [baseProducts, baseServices, baseVendors, tasteProfile, query, q]);
+
+  const visibleVendors = useMemo(() => {
+    if (q === "") return vendorCatalog;
+    const normalized = normalizeSearch(q);
+    return vendorCatalog.filter((vendor: any) => {
+      const text = normalizeSearch(
+        [vendor.name, vendor.business_name, vendor.full_name, vendor.cat].join(" "),
+      );
+      return text.includes(normalized);
+    });
+  }, [vendorCatalog, q]);
+
+  const visibleFollowedVendors = useMemo(() => {
+    const followedIds = new Set(
+      followedVendors.map((vendor: any) => vendor.id || vendor.serial_id),
+    );
+    return visibleVendors.filter((vendor: any) => followedIds.has(vendor.id || vendor.serial_id));
+  }, [visibleVendors, followedVendors]);
 
   const { data: searchResults } = useGlobalSearch(query);
   const { data: databaseSearchResults, isLoading: loadingDatabaseSearch } = useQuery({
@@ -498,6 +601,22 @@ function Index() {
     }
   };
 
+  const cartItems = useMemo(() => {
+    return cart.map((item) => {
+      const unitPrice = parseMoney(item.price);
+      return {
+        ...item,
+        unitPrice,
+        subtotal: unitPrice * item.quantity,
+      };
+    });
+  }, [cart]);
+
+  const cartTotal = useMemo(
+    () => cartItems.reduce((total, item) => total + item.subtotal, 0),
+    [cartItems],
+  );
+
   // Intersection Observer for Infinite Scroll
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -535,14 +654,7 @@ function Index() {
         query={query}
         onQueryChange={setQuery}
         cartCount={cart.reduce((total, item) => total + item.quantity, 0)}
-        onCartClick={() =>
-          toast(`Carrinho`, {
-            description:
-              cart.length === 0
-                ? "Ainda não há itens no carrinho."
-                : cart.map((item) => `${item.quantity}x ${item.title}`).join(" · "),
-          })
-        }
+        onCartClick={() => setCartOpen(true)}
         onSellClick={() => setSellOpen(true)}
       />
 
@@ -682,6 +794,18 @@ function Index() {
                             description: p.description,
                           });
                         }}
+                        onDetails={() => {
+                          recordInteraction(p);
+                          setDrawerItem({
+                            kind: "product",
+                            item_id: p.id,
+                            img: getItemImage(p),
+                            title: p.name,
+                            price: formatDrawerPrice(p.price),
+                            vendor_id: p.vendor_id,
+                            description: p.description,
+                          });
+                        }}
                       />
                     ))}
                   </div>
@@ -723,6 +847,18 @@ function Index() {
                             description: s.description,
                           });
                         }}
+                        onDetails={() => {
+                          recordInteraction(s);
+                          setDrawerItem({
+                            kind: "service",
+                            item_id: s.id,
+                            img: getItemImage(s),
+                            title: s.title || s.name,
+                            price: formatDrawerPrice(s.price),
+                            vendor_id: s.vendor_id,
+                            description: s.description,
+                          });
+                        }}
                       />
                     ))}
                   </div>
@@ -747,7 +883,7 @@ function Index() {
                   <Empty message="Ainda não existem lojas registadas." />
                 ) : (
                   <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-                    {baseVendors.map((v: any) => (
+                    {visibleVendors.map((v: any) => (
                       <VendorCard
                         key={v.id || v.serial_id}
                         vendor={{ ...v, name: v.name || v.business_name || v.full_name }}
@@ -795,7 +931,7 @@ function Index() {
                   <Empty message="Ainda não segues nenhuma loja." />
                 ) : (
                   <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-                    {followedVendors.map((v: any) => (
+                    {visibleFollowedVendors.map((v: any) => (
                       <VendorCard
                         key={v.id || v.serial_id}
                         vendor={{ ...v, name: v.name || v.business_name || v.full_name }}
@@ -879,6 +1015,17 @@ function Index() {
       </footer>
 
       <ItemDrawer item={drawerItem} onClose={() => setDrawerItem(null)} onConfirm={confirm} />
+      <CartSheet
+        open={cartOpen}
+        items={cartItems}
+        total={cartTotal}
+        onClose={() => setCartOpen(false)}
+        onClear={() => {
+          setCart([]);
+          window.localStorage.removeItem("musa-cart");
+          toast.success("Carrinho limpo");
+        }}
+      />
       <TasteOnboarding
         open={tasteOpen}
         profile={tasteProfile}
@@ -935,6 +1082,7 @@ function SearchResultsView({
                     key={product.id}
                     product={product}
                     onBuy={() => onProductClick(product)}
+                    onDetails={() => onProductClick(product)}
                   />
                 ))}
               </div>
@@ -950,6 +1098,7 @@ function SearchResultsView({
                     key={service.id}
                     service={service}
                     onBook={() => onServiceClick(service)}
+                    onDetails={() => onServiceClick(service)}
                   />
                 ))}
               </div>
@@ -1003,6 +1152,7 @@ function ForYouFeed({
                       "",
                   }}
                   onBuy={() => onProductClick(item)}
+                  onDetails={() => onProductClick(item)}
                 />
               </div>
             ) : (
@@ -1026,6 +1176,7 @@ function ForYouFeed({
                       "",
                   }}
                   onBook={() => onServiceClick(item)}
+                  onDetails={() => onServiceClick(item)}
                 />
               </div>
             ),
@@ -1308,6 +1459,127 @@ function ErrorState({ message }: { message: string }) {
   return (
     <div className="mt-4 rounded-xl border border-destructive/50 bg-destructive/10 p-4 text-center text-sm text-destructive">
       {message}
+    </div>
+  );
+}
+
+function CartSheet({
+  open,
+  items,
+  total,
+  onClose,
+  onClear,
+}: {
+  open: boolean;
+  items: Array<CartEntry & { unitPrice: number; subtotal: number }>;
+  total: number;
+  onClose: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "fixed inset-0 z-[110] transition-opacity duration-300",
+        open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+      )}
+      aria-hidden={!open}
+    >
+      <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className={cn(
+          "absolute bottom-0 left-0 right-0 rounded-t-[30px] border-t border-border-soft bg-card shadow-[0_-24px_80px_rgba(0,0,0,.18)] transition-transform duration-300 sm:left-1/2 sm:bottom-6 sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:rounded-[30px]",
+          open ? "translate-y-0" : "translate-y-full sm:translate-y-[calc(100%+24px)]",
+        )}
+      >
+        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-border sm:hidden" />
+        <div className="flex items-start justify-between gap-4 px-5 pt-5">
+          <div>
+            <p className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-accent-foreground">
+              Carrinho
+            </p>
+            <h3 className="mt-3 text-2xl font-black">Os teus produtos</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {items.length === 0
+                ? "Ainda não adicionaste nada."
+                : `${items.length} item${items.length > 1 ? "s" : ""} no carrinho.`}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex size-9 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="max-h-[52vh] overflow-y-auto px-5 pb-4 pt-5">
+          {items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-border-soft bg-secondary/40 px-6 py-12 text-center">
+              <ShoppingBag className="size-8 text-muted-foreground opacity-45" />
+              <p className="mt-3 text-sm font-semibold text-foreground">O carrinho está vazio.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Adiciona produtos para veres aqui o total final.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 rounded-[22px] border border-border-soft bg-background p-3"
+                >
+                  <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-secondary">
+                    {item.img ? (
+                      <img src={item.img} alt={item.title} className="size-full object-cover" />
+                    ) : (
+                      <ShoppingBag className="size-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h4 className="truncate text-sm font-bold">{item.title}</h4>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          {item.quantity} x {formatMoney(item.unitPrice)}
+                        </p>
+                      </div>
+                      <p className="shrink-0 font-mono text-sm font-bold text-primary">
+                        {formatMoney(item.subtotal)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-border-soft px-5 py-4">
+          <div className="flex items-center justify-between gap-3 rounded-[22px] bg-foreground px-4 py-4 text-background">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/65">
+                Total final
+              </p>
+              <p className="mt-1 text-2xl font-black">{formatMoney(total)}</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={onClear}
+                disabled={items.length === 0}
+                className="rounded-full border border-white/12 bg-white/8 px-4 py-2 text-[11px] font-bold text-white transition disabled:opacity-40"
+              >
+                Limpar
+              </button>
+              <button
+                onClick={onClose}
+                className="rounded-full bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground shadow-neon"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

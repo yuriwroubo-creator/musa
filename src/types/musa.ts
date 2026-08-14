@@ -30,6 +30,7 @@ export interface VendorSubscription {
   phone: string;
   email: string | null;
   business_name: string | null;
+  store_photo_url: string | null;
   plan: string | null;
   status: string | null;
   created_at: string | null;

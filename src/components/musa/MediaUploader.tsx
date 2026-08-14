@@ -4,53 +4,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Camera, X, Play, Upload, Loader2, Music } from "lucide-react";
 import { toast } from "sonner";
+import { MAX_UPLOAD_FILE_SIZE_LABEL, MUSA_MEDIA_BUCKET } from "@/lib/storage";
 import {
-  MAX_UPLOAD_FILE_SIZE_BYTES,
-  MAX_UPLOAD_FILE_SIZE_LABEL,
-  MUSA_MEDIA_BUCKET,
-} from "@/lib/storage";
+  buildUploadPath,
+  inferMediaMimeType,
+  isOversizedFile,
+  isSupportedMediaFile,
+  normalizeFileForUpload,
+} from "@/lib/media";
 
 interface MediaUploaderProps {
   onUploadComplete: (urls: string[]) => void;
   maxFiles?: number;
   accept?: string;
-}
-
-const mimeByExtension: Record<string, string> = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-  heic: "image/heic",
-  heif: "image/heif",
-  mp4: "video/mp4",
-  mov: "video/quicktime",
-  m4v: "video/x-m4v",
-  mp3: "audio/mpeg",
-  wav: "audio/wav",
-  aac: "audio/aac",
-  m4a: "audio/mp4",
-};
-
-function getFileExtension(file: File) {
-  return file.name.split(".").pop()?.toLowerCase() || "";
-}
-
-function getUploadContentType(file: File) {
-  return file.type || mimeByExtension[getFileExtension(file)] || "application/octet-stream";
-}
-
-function getSafeFileName(file: File) {
-  const extension = getFileExtension(file);
-  const baseName = file.name || `musa-upload.${extension || "bin"}`;
-  const safeName = baseName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-  return safeName.includes(".") ? safeName : `${safeName}.${extension || "bin"}`;
+  capture?: "user" | "environment" | undefined;
 }
 
 export const MediaUploader: React.FC<MediaUploaderProps> = ({
   onUploadComplete,
   maxFiles = 5,
   accept = "image/*,video/*,audio/*,.jpg,.jpeg,.png,.webp,.heic,.heif,.mp4,.mov,.m4v,.mp3,.wav,.aac,.m4a",
+  capture,
 }) => {
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
@@ -76,23 +50,13 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       return;
     }
 
-    const oversizedFiles = newFiles.filter((file) => file.size > MAX_UPLOAD_FILE_SIZE_BYTES);
+    const oversizedFiles = newFiles.filter((file) => isOversizedFile(file));
     if (oversizedFiles.length > 0) {
       toast.error(`Cada ficheiro pode ter no máximo ${MAX_UPLOAD_FILE_SIZE_LABEL}.`);
       return;
     }
 
-    const validFiles = newFiles.filter((file) => {
-      const extensionSupported = file.name.match(
-        /\.(jpg|jpeg|png|webp|heic|heif|mp4|mov|m4v|mp3|wav|aac|m4a)$/i,
-      );
-      return (
-        file.type.startsWith("image/") ||
-        file.type.startsWith("video/") ||
-        file.type.startsWith("audio/") ||
-        extensionSupported
-      );
-    });
+    const validFiles = newFiles.filter((file) => isSupportedMediaFile(file));
 
     if (validFiles.length !== newFiles.length) {
       toast.error("Apenas imagens, vídeos e áudios são suportados.");
@@ -150,17 +114,16 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       let completedCount = 0;
 
       for (const file of files) {
-        const timestamp = Date.now();
-        const random = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
-        const safeName = getSafeFileName(file);
-        const path = `${user.id}/${timestamp}_${random}_${safeName}`;
+        const path = buildUploadPath(user.id, file);
+        const uploadPayload = await normalizeFileForUpload(file);
+        const contentType = inferMediaMimeType(file);
 
         const { error: uploadError } = await supabase.storage
           .from(MUSA_MEDIA_BUCKET)
-          .upload(path, file, {
+          .upload(path, uploadPayload, {
             cacheControl: "3600",
-            contentType: getUploadContentType(file),
-            upsert: true,
+            contentType,
+            upsert: false,
           });
 
         if (uploadError) {
@@ -229,7 +192,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
             type="file"
             accept={accept}
             multiple
-            capture={undefined}
+            capture={capture}
             className="sr-only"
             onChange={handleFileChange}
             disabled={isUploading}

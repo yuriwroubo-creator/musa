@@ -119,6 +119,26 @@ const updateItemSchema = z.object({
   access_token: z.string().min(1),
 });
 
+const deleteItemSchema = z.object({
+  itemId: z.string().min(1),
+  itemType: z.enum(["produto", "servico"]),
+  access_token: z.string().min(1),
+});
+
+function extractStoragePath(url: string) {
+  try {
+    const parsed = new URL(url);
+    const marker = "/storage/v1/object/public/musa-media/";
+    const index = parsed.pathname.indexOf(marker);
+    if (index >= 0) {
+      return decodeURIComponent(parsed.pathname.slice(index + marker.length));
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export const publishItemFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => publishSchema.parse(input))
   .handler(async ({ data }) => {
@@ -465,6 +485,96 @@ export const updateItemFn = createServerFn({ method: "POST" })
         success: false,
         error: "Nenhuma alteração foi guardada. Confirma a tua sessão e tenta novamente.",
       };
+    }
+
+    return { success: true };
+  });
+
+export const deleteItemFn = createServerFn({ method: "POST" })
+  .validator((input: unknown) => deleteItemSchema.parse(input))
+  .handler(async ({ data }) => {
+    const supabase = getServerSupabase(data.access_token);
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const authenticatedUserId = authData.user?.id;
+
+    if (authError || !authenticatedUserId) {
+      return {
+        success: false,
+        error: "Sessão inválida. Inicia sessão novamente antes de apagar.",
+      };
+    }
+
+    const table = data.itemType === "produto" ? "products" : "services";
+    const { data: existingItem, error: lookupError } = await supabase
+      .from(table)
+      .select("id, vendor_id, media_urls")
+      .eq("id", data.itemId)
+      .maybeSingle();
+
+    if (lookupError) {
+      return {
+        success: false,
+        error: `Não foi possível localizar a publicação: ${lookupError.message}`,
+      };
+    }
+
+    if (!existingItem?.vendor_id) {
+      return {
+        success: false,
+        error: "Publicação não encontrada ou sem loja associada.",
+      };
+    }
+
+    const { data: vendor, error: vendorError } = await supabase
+      .from("vendor_subscriptions")
+      .select("id, user_id, vendor_id")
+      .eq("id", existingItem.vendor_id)
+      .maybeSingle();
+
+    if (vendorError) {
+      return {
+        success: false,
+        error: `Não foi possível validar a loja: ${vendorError.message}`,
+      };
+    }
+
+    if (
+      !vendor ||
+      (vendor.user_id !== authenticatedUserId && vendor.vendor_id !== authenticatedUserId)
+    ) {
+      return {
+        success: false,
+        error: "Não tens permissão para apagar esta publicação.",
+      };
+    }
+
+    const { error: deleteError } = await supabase
+      .from(table)
+      .delete()
+      .eq("id", data.itemId)
+      .eq("vendor_id", existingItem.vendor_id);
+
+    if (deleteError) {
+      return {
+        success: false,
+        error: `Falha ao apagar a publicação: ${deleteError.message}`,
+      };
+    }
+
+    const mediaUrls = Array.isArray(existingItem.media_urls) ? existingItem.media_urls : [];
+    const storagePaths = mediaUrls
+      .filter((url: unknown): url is string => typeof url === "string")
+      .map(extractStoragePath)
+      .filter((path): path is string => Boolean(path));
+
+    if (storagePaths.length > 0) {
+      const { error: removeError } = await supabase.storage.from("musa-media").remove(storagePaths);
+      if (removeError) {
+        return {
+          success: true,
+          warning: `A publicação foi apagada, mas alguns ficheiros não puderam ser removidos: ${removeError.message}`,
+        };
+      }
     }
 
     return { success: true };
