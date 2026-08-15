@@ -18,5 +18,5 @@ export const ALGOLIA_SEARCH_KEY =
 export const ALGOLIA_PRODUCTS_INDEX = "products";
 export const ALGOLIA_SERVICES_INDEX = "services";
 
-/** Where Google OAuth returns the user after sign-in. */
-export const OAUTH_REDIRECT_URL = "https://musa0.netlify.app";
+/** Where Google OAuth returns the user after sign-in. Set VITE_SITE_URL in Vercel env. */
+export const OAUTH_REDIRECT_URL = env["VITE_SITE_URL"] ?? "";

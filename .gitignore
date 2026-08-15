@@ -31,7 +31,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local Netlify folder
+# Local deployment tooling
 .netlify
+.vercel
 
 .env

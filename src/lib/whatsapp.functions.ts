@@ -39,9 +39,11 @@ function buildMessage(order: z.infer<typeof orderSchema>) {
 export const sendOrderToAdmin = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => orderSchema.parse(input))
   .handler(async ({ data }) => {
-    const instanceId = process.env["ULTRAMSG_INSTANCE_ID"];
-    const token = process.env["ULTRAMSG_TOKEN"];
-    const admin = process.env["WHATSAPP_ADMIN_NUMBER"];
+    const instanceId =
+      process.env["ULTRAMSG_INSTANCE_ID"] || process.env["VITE_ULTRAMSG_INSTANCE_ID"];
+    const token = process.env["ULTRAMSG_TOKEN"] || process.env["VITE_ULTRAMSG_TOKEN"];
+    const admin =
+      process.env["WHATSAPP_ADMIN_NUMBER"] || process.env["VITE_WHATSAPP_ADMIN_NUMBER"];
     if (!instanceId || !token || !admin) {
       return { sent: false, error: "ultramsg_not_configured" as const };
     }
@@ -100,9 +102,11 @@ const vendorMessageSchema = z.object({
 export const sendVendorPublishRequest = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => vendorMessageSchema.parse(input))
   .handler(async ({ data }) => {
-    const instanceId = process.env["VITE_ULTRAMSG_INSTANCE_ID"];
-    const token = process.env["VITE_ULTRAMSG_TOKEN"];
-    const admin = process.env["VITE_WHATSAPP_ADMIN_NUMBER"];
+    const instanceId =
+      process.env["ULTRAMSG_INSTANCE_ID"] || process.env["VITE_ULTRAMSG_INSTANCE_ID"];
+    const token = process.env["ULTRAMSG_TOKEN"] || process.env["VITE_ULTRAMSG_TOKEN"];
+    const admin =
+      process.env["WHATSAPP_ADMIN_NUMBER"] || process.env["VITE_WHATSAPP_ADMIN_NUMBER"];
     if (!instanceId || !token || !admin) {
       return { sent: false, error: "ultramsg_not_configured" as const };
     }
