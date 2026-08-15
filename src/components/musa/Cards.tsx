@@ -39,6 +39,13 @@ export function ProductCard({
     product.img || product.media_urls?.find((u) => u.match(/\.(jpg|jpeg|png|webp)$/i));
   const isThisAudioPlaying = currentTrack === audioUrl && isPlaying;
 
+  // Safe fallbacks for rendering
+  const displayTitle = product.name || product.title || "Produto sem título";
+  const displayStore = product.store_name || product.store || "Loja MUSA";
+  const displayPrice = formatPrice(product.price);
+  const displayImage = imageUrl || product.image_url || "";
+  const displayRating = product.rating || "Novo";
+
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
@@ -61,15 +68,15 @@ export function ProductCard({
   return (
     <article className="group luxe-card animate-rise flex flex-col overflow-hidden rounded-[22px] transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
       <div className="relative aspect-[1/1.18] w-full overflow-hidden bg-muted">
-        {imageUrl ? (
+        {displayImage ? (
           <img
-            src={imageUrl}
-            alt={product.name}
+            src={displayImage}
+            alt={displayTitle}
             loading="lazy"
             className="size-full object-cover transition-transform duration-700 group-hover:scale-[1.07]"
           />
         ) : (
-          <PlaceholderArt title={product.name} />
+          <PlaceholderArt title={displayTitle} />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/48 via-transparent to-black/14 opacity-80" />
         {audioUrl && (
@@ -80,9 +87,9 @@ export function ProductCard({
               if (isThisAudioPlaying) pause();
               else
                 play(audioUrl, {
-                  title: product.name,
-                  creator: product.store,
-                  artwork: product.img,
+                  title: displayTitle,
+                  creator: displayStore,
+                  artwork: displayImage,
                   subtitle: product.category,
                 });
             }}
@@ -144,14 +151,14 @@ export function ProductCard({
       </div>
       <div className="flex flex-1 flex-col gap-2 px-4 pb-4 pt-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-white/50">
-          {(product as any).store_name || product.store || "Loja MUSA"}
+          {displayStore}
         </p>
         <h3 className="min-h-[36px] text-[15px] font-bold leading-snug text-white">
-          {(product as any).title || product.name}
+          {displayTitle}
         </h3>
         <div className="mt-1 flex items-center justify-between gap-2">
           <p className="font-mono text-[13px] font-bold text-[#FF5BA3]">
-            {formatPrice(product.price)}
+            {displayPrice}
           </p>
         </div>
         <div className="mt-auto">
@@ -203,6 +210,13 @@ export function ServiceCard({
   const imageUrl =
     service.img || service.media_urls?.find((u) => u.match(/\.(jpg|jpeg|png|webp)$/i));
 
+  // Safe fallbacks for rendering
+  const displayTitle = service.name || service.title || service.description || "Serviço sem título";
+  const displayStore = service.store_name || service.store || "Loja MUSA";
+  const displayPrice = formatPrice(service.price);
+  const displayImage = imageUrl || service.image_url || "";
+  const displayRating = service.rating || "Novo";
+
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
@@ -225,16 +239,16 @@ export function ServiceCard({
   return (
     <article className="luxe-card animate-rise flex items-center gap-3 rounded-[22px] p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe bg-gradient-to-br from-white/5 to-white/10 border border-white/10">
       <div className="relative shrink-0">
-        {imageUrl ? (
+        {displayImage ? (
           <img
-            src={imageUrl}
-            alt={service.name}
+            src={displayImage}
+            alt={displayTitle}
             loading="lazy"
             className="size-[78px] rounded-[16px] object-cover lg:size-[92px]"
           />
         ) : (
           <PlaceholderArt
-            title={service.name}
+            title={displayTitle}
             kind="service"
             className="size-[78px] rounded-[16px] lg:size-[92px]"
           />
@@ -245,16 +259,16 @@ export function ServiceCard({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <h3 className="truncate text-[13px] font-bold lg:text-sm text-white">{service.name}</h3>
+          <h3 className="truncate text-[13px] font-bold lg:text-sm text-white">{displayTitle}</h3>
           <span className="flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-white/70">
             <Star className="size-2.5 fill-[#FF5BA3] text-[#FF5BA3]" />
-            {service.rating}
+            {displayRating}
           </span>
         </div>
-        <p className="mt-0.5 line-clamp-1 text-xs text-white/60">{service.title}</p>
+        <p className="mt-0.5 line-clamp-1 text-xs text-white/60">{displayStore}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <span className="font-mono text-[12px] font-bold text-[#FF5BA3]">
-            {formatPrice(service.price)}
+            {displayPrice}
           </span>
           <span
             className={cn(

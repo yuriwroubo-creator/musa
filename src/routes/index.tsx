@@ -210,15 +210,14 @@ function Index() {
       lastPage.length === 12 ? allPages.length : undefined,
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase
-        .from("products_with_views")
-        .select(`
-          *,
-          vendor:vendor_id(id, business_name, full_name, phone, whatsapp)
-        `)
-        .order("views_count", { ascending: false, nullsFirst: false })
+        .from("products")
+        .select("*")
         .order("created_at", { ascending: false })
         .range(pageParam * 12, (pageParam + 1) * 12 - 1);
-      if (error) throw error;
+      if (error) {
+        console.error("Erro crítico ao carregar o feed de produtos:", error);
+        throw error;
+      }
       return data || [];
     },
   });
@@ -238,13 +237,13 @@ function Index() {
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase
         .from("services")
-        .select(`
-          *,
-          vendor:vendor_id(id, business_name, full_name, phone, whatsapp)
-        `)
+        .select("*")
         .order("created_at", { ascending: false })
         .range(pageParam * 12, (pageParam + 1) * 12 - 1);
-      if (error) throw error;
+      if (error) {
+        console.error("Erro crítico ao carregar o feed de serviços:", error);
+        throw error;
+      }
       return data || [];
     },
   });
@@ -288,18 +287,18 @@ function Index() {
   const baseProducts = useMemo(() => {
     return dbProducts.map((product: any) => ({
       ...product,
-      store_name: product.vendor?.business_name || product.store || "Loja",
-      phone: product.vendor?.phone || product.phone || "",
-      whatsapp: product.vendor?.whatsapp || product.whatsapp || "",
+      store_name: product.store_name || product.store || "Loja",
+      phone: product.phone || "",
+      whatsapp: product.whatsapp || "",
     }));
   }, [dbProducts]);
 
   const baseServices = useMemo(() => {
     return dbServices.map((service: any) => ({
       ...service,
-      store_name: service.vendor?.business_name || service.store || "Loja",
-      phone: service.vendor?.phone || service.phone || "",
-      whatsapp: service.vendor?.whatsapp || service.whatsapp || "",
+      store_name: service.store_name || service.store || "Loja",
+      phone: service.phone || "",
+      whatsapp: service.whatsapp || "",
     }));
   }, [dbServices]);
 
@@ -382,12 +381,7 @@ function Index() {
         scoreCatalogItem(product, tasteProfile, query) +
         (q && searchScore(product, query) ? searchScore(product, query) / 8 : 0);
       addScore(
-        vendor || { 
-          id: product.vendor_id, 
-          name: product.store || "Loja",
-          phone: product.vendor?.phone || "",
-          whatsapp: product.vendor?.whatsapp || "",
-        },
+        vendor || { id: product.vendor_id, name: product.store || "Loja" },
         score,
         product.store || "Loja",
       );
@@ -402,12 +396,7 @@ function Index() {
         scoreCatalogItem(service, tasteProfile, query) +
         (q && searchScore(service, query) ? searchScore(service, query) / 8 : 0);
       addScore(
-        vendor || { 
-          id: service.vendor_id, 
-          name: service.name || "Loja",
-          phone: service.vendor?.phone || "",
-          whatsapp: service.vendor?.whatsapp || "",
-        },
+        vendor || { id: service.vendor_id, name: service.name || "Loja" },
         score,
         service.name || "Loja",
       );
@@ -445,19 +434,13 @@ function Index() {
       const [productsRes, servicesRes] = await Promise.all([
         supabase
           .from("products")
-          .select(`
-            *,
-            vendor:vendor_id(id, business_name, full_name, phone, whatsapp)
-          `)
+          .select("*")
           .or(`name.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
           .order("created_at", { ascending: false })
           .limit(80),
         supabase
           .from("services")
-          .select(`
-            *,
-            vendor:vendor_id(id, business_name, full_name, phone, whatsapp)
-          `)
+          .select("*")
           .or(`name.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
           .order("created_at", { ascending: false })
           .limit(80),
@@ -469,15 +452,15 @@ function Index() {
       return {
         products: (productsRes.data || []).map((product: any) => ({
           ...product,
-          store_name: product.vendor?.business_name || product.store || "Loja",
-          phone: product.vendor?.phone || product.phone || "",
-          whatsapp: product.vendor?.whatsapp || product.whatsapp || "",
+          store_name: product.store_name || product.store || "Loja",
+          phone: product.phone || "",
+          whatsapp: product.whatsapp || "",
         })),
         services: (servicesRes.data || []).map((service: any) => ({
           ...service,
-          store_name: service.vendor?.business_name || service.store || "Loja",
-          phone: service.vendor?.phone || service.phone || "",
-          whatsapp: service.vendor?.whatsapp || service.whatsapp || "",
+          store_name: service.store_name || service.store || "Loja",
+          phone: service.phone || "",
+          whatsapp: service.whatsapp || "",
         })),
       };
     },
@@ -523,9 +506,9 @@ function Index() {
             item.image_url ||
             item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
             "",
-          store_name: item.store_name || item.vendor?.business_name || item.store || "Loja",
-          phone: item.phone || item.vendor?.phone || "",
-          whatsapp: item.whatsapp || item.vendor?.whatsapp || "",
+          store_name: item.store_name || item.store || "Loja",
+          phone: item.phone || "",
+          whatsapp: item.whatsapp || "",
         }));
 
       return dedupeById([...databaseProducts, ...algoliaProducts, ...fuzzyProducts])
@@ -569,9 +552,9 @@ function Index() {
           item.image_url ||
           item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
           "",
-        store_name: item.store_name || item.vendor?.business_name || item.store || "Loja",
-        phone: item.phone || item.vendor?.phone || "",
-        whatsapp: item.whatsapp || item.vendor?.whatsapp || "",
+        store_name: item.store_name || item.store || "Loja",
+        phone: item.phone || "",
+        whatsapp: item.whatsapp || "",
       }));
       const fuzzyServices = [...baseServices]
         .filter((item: any) => searchScore(item, query) > 0)
@@ -589,9 +572,9 @@ function Index() {
             item.image_url ||
             item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
             "",
-          store_name: item.store_name || item.vendor?.business_name || item.store || "Loja",
-          phone: item.phone || item.vendor?.phone || "",
-          whatsapp: item.whatsapp || item.vendor?.whatsapp || "",
+          store_name: item.store_name || item.store || "Loja",
+          phone: item.phone || "",
+          whatsapp: item.whatsapp || "",
         }));
 
       return dedupeById([...databaseServices, ...algoliaServices, ...fuzzyServices])
