@@ -25,6 +25,7 @@ interface BuyModalProps {
     whatsapp?: string;
     vendor_phone?: string;
     phone?: string;
+    variants?: any[] | null;
   };
 }
 
@@ -128,17 +129,106 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [customNote, setCustomNote] = useState("");
 
-  const variants = categoryVariants[product.category] || [
-    {
-      name: "Quantidade",
-      required: true,
-      options: [
-        { id: "1", name: "1 unidade" },
-        { id: "2", name: "2 unidades" },
-        { id: "3", name: "3 unidades" },
-      ],
-    },
-  ];
+  const isService = product.category?.toLowerCase().includes("serviço") || product.category?.toLowerCase().includes("servico");
+  const isFood = product.category?.toLowerCase().includes("doces") || product.category?.toLowerCase().includes("catering") || product.category?.toLowerCase().includes("comida");
+  const isFashion = product.category?.toLowerCase().includes("roupas") || product.category?.toLowerCase().includes("moda") || product.category?.toLowerCase().includes("vestuário");
+  const isHair = product.category?.toLowerCase().includes("cabelos") || product.category?.toLowerCase().includes("laces");
+
+  const variants = product.variants && product.variants.length > 0 
+    ? product.variants.map((v: any) => ({
+        name: v.name || "Opção",
+        required: true,
+        options: v.options?.map((o: any) => ({
+          id: o.id || o.value,
+          name: o.name || o.value,
+          price: o.price || 0,
+        })) || [],
+      }))
+    : isFood
+      ? [
+          {
+            name: "Quantidade",
+            required: true,
+            options: [
+              { id: "1", name: "1 unidade" },
+              { id: "6", name: "6 unidades" },
+              { id: "12", name: "12 unidades" },
+              { id: "24", name: "24 unidades" },
+            ],
+          },
+          {
+            name: "Sabor",
+            required: true,
+            options: [
+              { id: "chocolate", name: "Chocolate" },
+              { id: "baunilha", name: "Baunilha" },
+              { id: "morango", name: "Morango" },
+              { id: "misto", name: "Misto" },
+            ],
+          },
+        ]
+      : isFashion
+      ? [
+          {
+            name: "Tamanho",
+            required: true,
+            options: [
+              { id: "xs", name: "XS" },
+              { id: "s", name: "S" },
+              { id: "m", name: "M" },
+              { id: "l", name: "L" },
+              { id: "xl", name: "XL" },
+              { id: "xxl", name: "XXL" },
+            ],
+          },
+          {
+            name: "Cor",
+            required: true,
+            options: [
+              { id: "preto", name: "Preto" },
+              { id: "branco", name: "Branco" },
+              { id: "vermelho", name: "Vermelho" },
+              { id: "azul", name: "Azul" },
+              { id: "rosa", name: "Rosa" },
+              { id: "dourado", name: "Dourado" },
+              { id: "outro", name: "Outro" },
+            ],
+          },
+        ]
+      : isHair
+      ? [
+          {
+            name: "Comprimento",
+            required: true,
+            options: [
+              { id: "curto", name: "Curto (10-12cm)" },
+              { id: "medio", name: "Médio (14-16cm)" },
+              { id: "longo", name: "Longo (18-20cm)" },
+              { id: "extra", name: "Extra Longo (22cm+)" },
+            ],
+          },
+          {
+            name: "Textura",
+            required: true,
+            options: [
+              { id: "liso", name: "Liso" },
+              { id: "ondulado", name: "Ondulado" },
+              { id: "cacheado", name: "Cacheado" },
+              { id: "kinky", name: "Kinky" },
+            ],
+          },
+        ]
+      : [
+          {
+            name: "Quantidade",
+            required: true,
+            options: [
+              { id: "1", name: "1 unidade" },
+              { id: "2", name: "2 unidades" },
+              { id: "3", name: "3 unidades" },
+            ],
+          },
+        ];
 
   const basePrice = typeof product.price === 'number' ? product.price : 
     parseFloat(String(product.price).replace(/\D/g, '')) || 0;
@@ -213,14 +303,14 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-border-soft bg-card shadow-luxe"
+        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1a1a2e] text-white shadow-[0_30px_80px_rgba(0,0,0,.5)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border-soft px-5 py-4">
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <div>
-            <h3 className="text-lg font-bold">Comprar Produto</h3>
-            <p className="text-xs text-muted-foreground">{product.name}</p>
+            <h3 className="text-lg font-bold">{isService ? "Agendar Serviço" : "Comprar Produto"}</h3>
+            <p className="text-xs text-white/60">{product.name}</p>
           </div>
           <button
             onClick={onClose}
@@ -234,37 +324,37 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
         {/* Content */}
         <div className="px-5 py-4 space-y-4">
           {/* Product Info */}
-          <div className="flex items-center gap-3 rounded-xl bg-accent/30 p-3">
-            <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
+            <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-[#FF2D78] to-[#FF5BA3] text-white">
               <ShoppingCart className="size-5" />
             </div>
             <div>
-              <p className="text-sm font-bold">{product.name}</p>
-              <p className="text-xs text-muted-foreground">{product.store}</p>
+              <p className="text-sm font-bold text-white">{product.name}</p>
+              <p className="text-xs text-white/60">{product.store}</p>
             </div>
-            <p className="ml-auto font-mono text-sm font-bold text-primary">
+            <p className="ml-auto font-mono text-sm font-bold text-[#FF5BA3]">
               {formatPrice(basePrice)}
             </p>
           </div>
 
           {/* Quantity */}
           <div>
-            <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            <label className="text-xs font-bold uppercase tracking-wide text-white/60">
               Quantidade
             </label>
             <div className="mt-2 flex items-center gap-2">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="flex size-8 items-center justify-center rounded-lg border border-border-soft bg-card transition-colors hover:bg-accent"
+                className="flex size-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10"
               >
                 -
               </button>
-              <span className="flex min-w-[40px] items-center justify-center font-mono font-bold">
+              <span className="flex min-w-[40px] items-center justify-center font-mono font-bold text-white">
                 {quantity}
               </span>
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="flex size-8 items-center justify-center rounded-lg border border-border-soft bg-card transition-colors hover:bg-accent"
+                className="flex size-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10"
               >
                 +
               </button>
@@ -274,7 +364,7 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
           {/* Dynamic Variants */}
           {variants.map((group) => (
             <div key={group.name}>
-              <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              <label className="text-xs font-bold uppercase tracking-wide text-white/60">
                 {group.name}
                 {group.required && " *"}
               </label>
@@ -288,8 +378,8 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
                       className={cn(
                         "rounded-lg border px-3 py-2 text-xs font-bold transition-all",
                         isSelected
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border-soft bg-card hover:border-primary/35",
+                          ? "border-[#FF5BA3] bg-[#FF2D78]/20 text-[#FF5BA3]"
+                          : "border-white/10 bg-white/5 text-white/70 hover:border-white/20",
                       )}
                     >
                       {option.name}
@@ -307,32 +397,32 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
 
           {/* Custom Note */}
           <div>
-            <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              Nota Opcional
+            <label className="text-xs font-bold uppercase tracking-wide text-white/60">
+              Personalizar / Especificações
             </label>
             <textarea
               value={customNote}
               onChange={(e) => setCustomNote(e.target.value)}
-              placeholder="Detalhes adicionais sobre o teu pedido..."
-              className="mt-2 w-full rounded-lg border border-border-soft bg-card px-3 py-2 text-xs placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none"
+              placeholder="Detalhes personalizados, observações ou preferências..."
+              className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white outline-none placeholder:text-white/35 leading-relaxed"
               rows={2}
             />
           </div>
 
           {/* Total */}
-          <div className="flex items-center justify-between rounded-xl bg-accent/30 p-3">
-            <span className="text-sm font-bold">Total</span>
-            <span className="font-mono text-lg font-bold text-primary">
+          <div className="flex items-center justify-between rounded-xl bg-white/5 p-3">
+            <span className="text-sm font-bold text-white">Total</span>
+            <span className="font-mono text-lg font-bold text-[#FF5BA3]">
               {formatPrice(totalPrice)}
             </span>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex gap-2 border-t border-border-soft px-5 py-4">
+        <div className="flex gap-2 border-t border-white/10 px-5 py-4">
           <button
             onClick={onClose}
-            className="flex-1 rounded-xl border border-border-soft bg-card py-3 text-xs font-bold transition-colors hover:bg-accent"
+            className="flex-1 rounded-xl border border-white/10 bg-white/5 py-3 text-xs font-bold text-white/70 transition-colors hover:bg-white/10"
           >
             Cancelar
           </button>
@@ -340,12 +430,12 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
             onClick={handleWhatsAppCheckout}
             disabled={!isFormValid}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 text-xs font-bold text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed",
-              isFormValid && "shadow-neon",
+              "flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] py-3 text-xs font-bold text-white transition-all hover:shadow-[0_8px_24px_rgba(255,45,120,.4)] disabled:opacity-50 disabled:shadow-none",
+              isFormValid && "shadow-[0_12px_32px_rgba(255,45,120,.5)]",
             )}
           >
             <MessageCircle className="size-4" />
-            Comprar no WhatsApp
+            {isService ? "Agendar via WhatsApp" : "Comprar via WhatsApp"}
           </button>
         </div>
       </div>

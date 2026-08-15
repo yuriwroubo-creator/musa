@@ -1,4 +1,4 @@
-import { Star, Check, MapPin, Heart, Play } from "lucide-react";
+import { Star, Check, MapPin, Heart, Play, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Product, Service, Vendor } from "@/lib/musa-data";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -8,10 +8,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAudio } from "@/lib/AudioContext";
 import { PlaceholderArt } from "@/components/musa/PlaceholderArt";
+import { DetailModal } from "./DetailModal";
 
 function formatPrice(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return `${value.toLocaleString("pt-AO")} AOA`;
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return `${value.toLocaleString("pt-AO")} Kz`;
   }
   if (typeof value === "string" && value.trim()) return value;
   return "Preço sob consulta";
@@ -22,7 +23,7 @@ export function ProductCard({
   onBuy,
   onDetails,
 }: {
-  product: Product & { vendor_id?: string | null; description?: string | null };
+  product: Product & { vendor_id?: string | null; description?: string | null; variants?: any[] | null };
   onBuy: () => void;
   onDetails: () => void;
 }) {
@@ -113,12 +114,12 @@ export function ProductCard({
           onClick={handleFavoriteClick}
           disabled={toggleFavorite.isPending}
           aria-label="Adicionar aos favoritos"
-          className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-white/82 text-foreground shadow-sm backdrop-blur-sm transition-all hover:scale-105 active:scale-90"
+          className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-white/12 text-white shadow-sm backdrop-blur-sm transition-all hover:scale-105 active:scale-90"
         >
           <Heart
             className={cn(
               "size-3.5 transition-colors",
-              isFavorite ? "fill-primary text-primary" : "text-muted-foreground",
+              isFavorite ? "fill-[#FF5BA3] text-[#FF5BA3]" : "text-white/80",
             )}
           />
         </button>
@@ -130,8 +131,8 @@ export function ProductCard({
             className={cn(
               "absolute left-2 top-11 flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold backdrop-blur-sm transition-all",
               isFollowing
-                ? "bg-primary text-primary-foreground shadow-neon"
-                : "bg-white/82 text-foreground shadow-sm hover:scale-[1.02]",
+                ? "bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] text-white shadow-[0_4px_16px_rgba(255,45,120,.3)]"
+                : "bg-white/12 text-white/80 shadow-sm hover:scale-[1.02]",
             )}
           >
             {isFollowing ? "A seguir" : "Seguir"}
@@ -141,34 +142,43 @@ export function ProductCard({
           {product.category}
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-1 px-3.5 pb-3.5 pt-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-          {product.store}
+      <div className="flex flex-1 flex-col gap-2 px-4 pb-4 pt-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-white/50">
+          {(product as any).store_name || product.store || "Loja MUSA"}
         </p>
-        <h3 className="min-h-[36px] text-[13px] font-bold leading-snug lg:text-sm">
-          {product.name}
+        <h3 className="min-h-[36px] text-[15px] font-bold leading-snug text-white">
+          {(product as any).title || product.name}
         </h3>
-        <div className="mt-0.5 flex items-center justify-between gap-2">
-          <p className="font-mono text-[12.5px] font-bold text-primary">
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <p className="font-mono text-[13px] font-bold text-[#FF5BA3]">
             {formatPrice(product.price)}
           </p>
-          <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold text-accent-foreground">
-            Trend
-          </span>
         </div>
-        <div className="mt-auto grid grid-cols-2 gap-2">
-          <button
-            onClick={onBuy}
-            className="sheen rounded-xl bg-foreground py-2.5 text-[11.5px] font-bold tracking-wide text-background shadow-soft transition-all hover:bg-primary hover:text-primary-foreground active:scale-95"
-          >
-            Comprar
-          </button>
-          <button
-            onClick={onDetails}
-            className="rounded-xl border border-border-soft bg-card py-2.5 text-[11.5px] font-bold tracking-wide text-foreground transition-all hover:border-primary/35 hover:bg-accent active:scale-95"
-          >
-            Ver mais
-          </button>
+        <div className="mt-auto">
+          {product.variants && product.variants.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={onBuy}
+                className="sheen rounded-xl bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] py-2.5 text-[11.5px] font-bold tracking-wide text-white shadow-[0_8px_24px_rgba(255,45,120,.35)] transition-all hover:shadow-[0_12px_32px_rgba(255,45,120,.5)] hover:-translate-y-0.5 active:scale-95"
+              >
+                Opções
+              </button>
+              <button
+                onClick={onDetails}
+                className="rounded-xl border border-white/10 bg-white/8 py-2.5 text-[11.5px] font-bold tracking-wide text-white/90 transition-all hover:border-white/20 hover:bg-white/12 active:scale-95"
+              >
+                Ver mais
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onBuy}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] py-3 text-[11.5px] font-bold tracking-wide text-white shadow-[0_8px_24px_rgba(255,45,120,.35)] transition-all hover:shadow-[0_12px_32px_rgba(255,45,120,.5)] hover:-translate-y-0.5 active:scale-95"
+            >
+              <MessageCircle className="size-4" />
+              Comprar via WhatsApp
+            </button>
+          )}
         </div>
       </div>
     </article>
@@ -180,7 +190,7 @@ export function ServiceCard({
   onBook,
   onDetails,
 }: {
-  service: Service & { vendor_id?: string | null; description?: string | null };
+  service: Service & { vendor_id?: string | null; description?: string | null; variants?: any[] | null };
   onBook: () => void;
   onDetails: () => void;
 }) {
@@ -213,7 +223,7 @@ export function ServiceCard({
   };
 
   return (
-    <article className="luxe-card animate-rise flex items-center gap-3 rounded-[22px] p-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
+    <article className="luxe-card animate-rise flex items-center gap-3 rounded-[22px] p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe bg-gradient-to-br from-white/5 to-white/10 border border-white/10">
       <div className="relative shrink-0">
         {imageUrl ? (
           <img
@@ -235,23 +245,23 @@ export function ServiceCard({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <h3 className="truncate text-[13px] font-bold lg:text-sm">{service.name}</h3>
-          <span className="flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-muted-foreground">
-            <Star className="size-2.5 fill-primary text-primary" />
+          <h3 className="truncate text-[13px] font-bold lg:text-sm text-white">{service.name}</h3>
+          <span className="flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-white/70">
+            <Star className="size-2.5 fill-[#FF5BA3] text-[#FF5BA3]" />
             {service.rating}
           </span>
         </div>
-        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{service.title}</p>
+        <p className="mt-0.5 line-clamp-1 text-xs text-white/60">{service.title}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <span className="font-mono text-[12px] font-bold text-primary">
+          <span className="font-mono text-[12px] font-bold text-[#FF5BA3]">
             {formatPrice(service.price)}
           </span>
           <span
             className={cn(
               "flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-bold",
               service.home
-                ? "bg-accent text-accent-foreground"
-                : "bg-secondary text-muted-foreground",
+                ? "bg-white/10 text-white/80"
+                : "bg-white/5 text-white/60",
             )}
           >
             <MapPin className="size-2.5" />
@@ -264,12 +274,12 @@ export function ServiceCard({
           onClick={handleFavoriteClick}
           disabled={toggleFavorite.isPending}
           aria-label="Adicionar aos favoritos"
-          className="flex size-7 items-center justify-center rounded-full transition-all active:scale-90 hover:bg-secondary"
+          className="flex size-7 items-center justify-center rounded-full transition-all active:scale-90 hover:bg-white/10"
         >
           <Heart
             className={cn(
               "size-4 transition-colors",
-              isFavorite ? "fill-primary text-primary" : "text-muted-foreground",
+              isFavorite ? "fill-[#FF5BA3] text-[#FF5BA3]" : "text-white/60",
             )}
           />
         </button>
@@ -280,26 +290,38 @@ export function ServiceCard({
             className={cn(
               "rounded-full px-2.5 py-1 text-[9.5px] font-bold transition-all",
               isFollowing
-                ? "bg-primary text-primary-foreground shadow-neon"
-                : "bg-secondary text-muted-foreground hover:text-foreground",
+                ? "bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] text-white shadow-[0_4px_16px_rgba(255,45,120,.3)]"
+                : "bg-white/10 text-white/70 hover:text-white",
             )}
           >
             {isFollowing ? "A seguir" : "Seguir"}
           </button>
         )}
-        <div className="mt-auto grid w-full gap-1.5">
-          <button
-            onClick={onBook}
-            className="sheen rounded-xl bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground shadow-neon transition-all hover:shadow-neon-lg active:scale-95"
-          >
-            Agendar
-          </button>
-          <button
-            onClick={onDetails}
-            className="rounded-xl border border-border-soft bg-card px-4 py-2 text-[11px] font-bold text-foreground transition-all hover:border-primary/35 hover:bg-accent active:scale-95"
-          >
-            Ver mais
-          </button>
+        <div className="mt-auto">
+          {service.variants && service.variants.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={onBook}
+                className="sheen rounded-xl bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] px-4 py-2 text-[11px] font-bold text-white shadow-[0_8px_24px_rgba(255,45,120,.35)] transition-all hover:shadow-[0_12px_32px_rgba(255,45,120,.5)] hover:-translate-y-0.5 active:scale-95"
+              >
+                Opções
+              </button>
+              <button
+                onClick={onDetails}
+                className="rounded-xl border border-white/10 bg-white/8 px-4 py-2 text-[11px] font-bold text-white/90 transition-all hover:border-white/20 hover:bg-white/12 active:scale-95"
+              >
+                Ver mais
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onBook}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] px-4 py-2 text-[11px] font-bold text-white shadow-[0_8px_24px_rgba(255,45,120,.35)] transition-all hover:shadow-[0_12px_32px_rgba(255,45,120,.5)] hover:-translate-y-0.5 active:scale-95"
+            >
+              <MessageCircle className="size-4" />
+              Agendar via WhatsApp
+            </button>
+          )}
         </div>
       </div>
     </article>
@@ -336,7 +358,7 @@ export function VendorCard({ vendor }: { vendor: Vendor & { store_photo_url?: st
   };
 
   return (
-    <article className="luxe-card animate-rise flex flex-col items-center gap-2 rounded-[22px] px-3 py-5 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
+    <article className="luxe-card animate-rise flex flex-col items-center gap-2 rounded-[22px] px-4 py-5 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe bg-gradient-to-br from-white/5 to-white/10 border border-white/10">
       <div className="relative">
         {vendor.img || vendor.store_photo_url ? (
           <img
@@ -355,9 +377,9 @@ export function VendorCard({ vendor }: { vendor: Vendor & { store_photo_url?: st
         </span>
       </div>
       <div>
-        <h3 className="text-[12.5px] font-bold">{vendor.name}</h3>
-        <p className="text-[10.5px] text-muted-foreground">{vendor.cat}</p>
-        <p className="mt-0.5 text-[10px] text-muted-foreground">
+        <h3 className="text-[12.5px] font-bold text-white">{vendor.name}</h3>
+        <p className="text-[10.5px] text-white/60">{vendor.cat}</p>
+        <p className="mt-0.5 text-[10px] text-white/50">
           {followerCount} {followerCount === 1 ? "seguidora" : "seguidoras"}
         </p>
       </div>
@@ -367,8 +389,8 @@ export function VendorCard({ vendor }: { vendor: Vendor & { store_photo_url?: st
         className={cn(
           "mt-1 w-full rounded-full py-1.5 text-[10.5px] font-bold transition-all disabled:opacity-70",
           isFollowing
-            ? "bg-primary text-primary-foreground shadow-neon"
-            : "border border-foreground hover:bg-foreground hover:text-background",
+            ? "bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] text-white shadow-[0_4px_16px_rgba(255,45,120,.3)]"
+            : "border border-white/20 text-white/70 hover:bg-white/10 hover:text-white",
         )}
       >
         {isFollowing ? "A seguir ✓" : "Seguir"}

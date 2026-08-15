@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Send, Sparkles, X } from "lucide-react";
+import { Loader2, Send, X } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { musaAssistantFn } from "@/lib/musa-ai.functions";
@@ -138,22 +138,10 @@ export function MusaAiFab() {
     <>
       <button
         onClick={() => setOpen((current) => !current)}
-        className={cn(
-          "fixed bottom-[92px] right-4 z-[90] flex items-center gap-2 rounded-full border border-white/12 bg-[linear-gradient(135deg,rgba(255,45,120,.98),rgba(31,18,31,.96))] px-4 py-3 text-white shadow-[0_16px_48px_rgba(255,45,120,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_60px_rgba(255,45,120,.5)] lg:bottom-5",
-          open && "scale-95",
-        )}
-        aria-label="Abrir Musa AI"
+        className="fixed bottom-[92px] right-4 z-[90] flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-[#FF2D78] to-[#FF5BA3] text-white shadow-[0_12px_32px_rgba(255,45,120,.4)] transition hover:shadow-[0_16px_40px_rgba(255,45,120,.6)] hover:scale-105 active:scale-95 lg:bottom-5"
+        aria-label="Abrir assistente"
       >
-        <span className="flex size-9 items-center justify-center rounded-full bg-white/12">
-          <MusaAiLogo className="size-6" />
-        </span>
-        <span className="hidden flex-col items-start text-left sm:flex">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/65">
-            Musa AI
-          </span>
-          <span className="text-[13px] font-bold leading-none">Assistente premium</span>
-        </span>
-        <Sparkles className="size-4 opacity-80" />
+        <MusaAiLogo className="size-6" />
       </button>
 
       <AnimatePresence>
@@ -188,7 +176,6 @@ export function MusaAiFab() {
               </div>
               <div>
                 <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/65">
-                  <Sparkles className="size-3.5" />
                   Luanda, Angola
                 </p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight">Musa AI</h2>

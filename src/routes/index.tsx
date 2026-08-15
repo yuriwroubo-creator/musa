@@ -8,8 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFollows } from "@/hooks/useFollows";
 import { SiteHeader } from "@/components/musa/SiteHeader";
 import { ProductCard, ServiceCard, VendorCard } from "@/components/musa/Cards";
-import { ItemDrawer, type DrawerItem } from "@/components/musa/ItemDrawer";
 import { BuyModal } from "@/components/musa/BuyModal";
+import { DetailModal } from "@/components/musa/DetailModal";
 import { useSellModal } from "@/lib/SellContext";
 import { productCategories, serviceCategories } from "@/lib/musa-data";
 import { cn } from "@/lib/utils";
@@ -48,7 +48,14 @@ export const Route = createFileRoute("/")({
 });
 
 type Tab = "produtos" | "servicos" | "lojas" | "seguidoras";
-type CartEntry = DrawerItem & { id: string; quantity: number };
+type CartEntry = {
+  id: string;
+  quantity: number;
+  title: string;
+  price: string;
+  img: string;
+  kind: string;
+};
 
 const tabs: { id: Tab; label: string; emoji: string }[] = [
   { id: "produtos", label: "Produtos", emoji: "🛍️" },
@@ -178,9 +185,9 @@ function Index() {
   const [prodCat, setProdCat] = useState("Todos");
   const [svcCat, setSvcCat] = useState("Todos");
   const [query, setQuery] = useState("");
-  const [drawerItem, setDrawerItem] = useState<DrawerItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [buyModalItem, setBuyModalItem] = useState<any | null>(null);
+  const [detailModalItem, setDetailModalItem] = useState<any | null>(null);
   const { setSellOpen } = useSellModal();
   const [cart, setCart] = useState<CartEntry[]>(readStoredCart);
   const [tasteProfile, setTasteProfile] = useState<TasteProfile>(() => getTasteProfile());
@@ -204,7 +211,10 @@ function Index() {
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase
         .from("products_with_views")
-        .select("*")
+        .select(`
+          *,
+          vendor:vendor_id(id, business_name, full_name, phone, whatsapp)
+        `)
         .order("views_count", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
         .range(pageParam * 12, (pageParam + 1) * 12 - 1);
@@ -228,7 +238,10 @@ function Index() {
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase
         .from("services")
-        .select("*")
+        .select(`
+          *,
+          vendor:vendor_id(id, business_name, full_name, phone, whatsapp)
+        `)
         .order("created_at", { ascending: false })
         .range(pageParam * 12, (pageParam + 1) * 12 - 1);
       if (error) throw error;
@@ -245,7 +258,7 @@ function Index() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vendor_subscriptions")
-        .select("id, serial_id, full_name, business_name, store_photo_url, plan, status")
+        .select("id, serial_id, full_name, business_name, store_photo_url, plan, status, phone, whatsapp")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -260,6 +273,8 @@ function Index() {
           img: vendor.store_photo_url || "",
           business_name: vendor.business_name || "",
           full_name: vendor.full_name || "",
+          phone: vendor.phone || "",
+          whatsapp: vendor.whatsapp || "",
         };
       });
     },
@@ -270,8 +285,23 @@ function Index() {
   const dbServices = useMemo(() => servicesData?.pages.flat() || [], [servicesData]);
   const baseVendors = useMemo(() => dbVendors ?? [], [dbVendors]);
 
-  const baseProducts = dbProducts;
-  const baseServices = dbServices;
+  const baseProducts = useMemo(() => {
+    return dbProducts.map((product: any) => ({
+      ...product,
+      store_name: product.vendor?.business_name || product.store || "Loja",
+      phone: product.vendor?.phone || product.phone || "",
+      whatsapp: product.vendor?.whatsapp || product.whatsapp || "",
+    }));
+  }, [dbProducts]);
+
+  const baseServices = useMemo(() => {
+    return dbServices.map((service: any) => ({
+      ...service,
+      store_name: service.vendor?.business_name || service.store || "Loja",
+      phone: service.vendor?.phone || service.phone || "",
+      whatsapp: service.vendor?.whatsapp || service.whatsapp || "",
+    }));
+  }, [dbServices]);
 
   const { follows, isLoading: loadingFollows } = useFollows();
   const { user, signInWithGoogle } = useAuth();
@@ -332,6 +362,8 @@ function Index() {
           name: vendor?.name || vendor?.business_name || vendor?.full_name || fallbackName,
           cat: vendor?.cat || vendor?.plan || vendor?.status || "Loja",
           img: vendor?.img || vendor?.store_photo_url || "",
+          phone: vendor?.phone || "",
+          whatsapp: vendor?.whatsapp || "",
         },
         score: nextScore,
       });
@@ -350,7 +382,12 @@ function Index() {
         scoreCatalogItem(product, tasteProfile, query) +
         (q && searchScore(product, query) ? searchScore(product, query) / 8 : 0);
       addScore(
-        vendor || { id: product.vendor_id, name: product.store || "Loja" },
+        vendor || { 
+          id: product.vendor_id, 
+          name: product.store || "Loja",
+          phone: product.vendor?.phone || "",
+          whatsapp: product.vendor?.whatsapp || "",
+        },
         score,
         product.store || "Loja",
       );
@@ -365,7 +402,12 @@ function Index() {
         scoreCatalogItem(service, tasteProfile, query) +
         (q && searchScore(service, query) ? searchScore(service, query) / 8 : 0);
       addScore(
-        vendor || { id: service.vendor_id, name: service.name || "Loja" },
+        vendor || { 
+          id: service.vendor_id, 
+          name: service.name || "Loja",
+          phone: service.vendor?.phone || "",
+          whatsapp: service.vendor?.whatsapp || "",
+        },
         score,
         service.name || "Loja",
       );
@@ -403,13 +445,19 @@ function Index() {
       const [productsRes, servicesRes] = await Promise.all([
         supabase
           .from("products")
-          .select("*")
+          .select(`
+            *,
+            vendor:vendor_id(id, business_name, full_name, phone, whatsapp)
+          `)
           .or(`name.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
           .order("created_at", { ascending: false })
           .limit(80),
         supabase
           .from("services")
-          .select("*")
+          .select(`
+            *,
+            vendor:vendor_id(id, business_name, full_name, phone, whatsapp)
+          `)
           .or(`name.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
           .order("created_at", { ascending: false })
           .limit(80),
@@ -419,8 +467,18 @@ function Index() {
       if (servicesRes.error) throw servicesRes.error;
 
       return {
-        products: productsRes.data || [],
-        services: servicesRes.data || [],
+        products: (productsRes.data || []).map((product: any) => ({
+          ...product,
+          store_name: product.vendor?.business_name || product.store || "Loja",
+          phone: product.vendor?.phone || product.phone || "",
+          whatsapp: product.vendor?.whatsapp || product.whatsapp || "",
+        })),
+        services: (servicesRes.data || []).map((service: any) => ({
+          ...service,
+          store_name: service.vendor?.business_name || service.store || "Loja",
+          phone: service.vendor?.phone || service.phone || "",
+          whatsapp: service.vendor?.whatsapp || service.whatsapp || "",
+        })),
       };
     },
   });
@@ -465,6 +523,9 @@ function Index() {
             item.image_url ||
             item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
             "",
+          store_name: item.store_name || item.vendor?.business_name || item.store || "Loja",
+          phone: item.phone || item.vendor?.phone || "",
+          whatsapp: item.whatsapp || item.vendor?.whatsapp || "",
         }));
 
       return dedupeById([...databaseProducts, ...algoliaProducts, ...fuzzyProducts])
@@ -508,6 +569,9 @@ function Index() {
           item.image_url ||
           item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
           "",
+        store_name: item.store_name || item.vendor?.business_name || item.store || "Loja",
+        phone: item.phone || item.vendor?.phone || "",
+        whatsapp: item.whatsapp || item.vendor?.whatsapp || "",
       }));
       const fuzzyServices = [...baseServices]
         .filter((item: any) => searchScore(item, query) > 0)
@@ -525,6 +589,9 @@ function Index() {
             item.image_url ||
             item.media_urls?.find((url: string) => /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url)) ||
             "",
+          store_name: item.store_name || item.vendor?.business_name || item.store || "Loja",
+          phone: item.phone || item.vendor?.phone || "",
+          whatsapp: item.whatsapp || item.vendor?.whatsapp || "",
         }));
 
       return dedupeById([...databaseServices, ...algoliaServices, ...fuzzyServices])
@@ -581,26 +648,6 @@ function Index() {
       saveTasteProfile(next);
       return next;
     });
-  };
-
-  const confirm = (item: DrawerItem) => {
-    setDrawerItem(null);
-    if (item.kind === "product") {
-      setCart((current) => {
-        const id = `${item.kind}-${item.item_id || item.title}`;
-        const existing = current.find((entry) => entry.id === id);
-        const next = existing
-          ? current.map((entry) =>
-              entry.id === id ? { ...entry, quantity: entry.quantity + 1 } : entry,
-            )
-          : [...current, { ...item, id, quantity: 1 }];
-        window.localStorage.setItem("musa-cart", JSON.stringify(next));
-        return next;
-      });
-      toast.success("Adicionado ao carrinho", { description: item.title });
-    } else {
-      toast.success("Agendamento confirmado! ✅", { description: item.title });
-    }
   };
 
   const cartItems = useMemo(() => {
@@ -713,59 +760,11 @@ function Index() {
             loading={loadingDatabaseSearch}
             products={visibleProducts}
             services={visibleServices}
-            onProductClick={(p) => {
-              recordInteraction(p);
-              setDrawerItem({
-                kind: "product",
-                item_id: p.id,
-                img: getItemImage(p),
-                title: p.name,
-                price: formatDrawerPrice(p.price),
-                vendor_id: p.vendor_id,
-                description: p.description,
-              });
-            }}
-            onServiceClick={(s) => {
-              recordInteraction(s);
-              setDrawerItem({
-                kind: "service",
-                item_id: s.id,
-                img: getItemImage(s),
-                title: s.title || s.name,
-                price: formatDrawerPrice(s.price),
-                vendor_id: s.vendor_id,
-                description: s.description,
-              });
-            }}
           />
         ) : (
           <>
             <ForYouFeed
               items={forYouItems}
-              onProductClick={(p) => {
-                recordInteraction(p);
-                setDrawerItem({
-                  kind: "product",
-                  item_id: p.id,
-                  img: getItemImage(p),
-                  title: p.name,
-                  price: formatDrawerPrice(p.price),
-                  vendor_id: p.vendor_id,
-                  description: p.description,
-                });
-              }}
-              onServiceClick={(s) => {
-                recordInteraction(s);
-                setDrawerItem({
-                  kind: "service",
-                  item_id: s.id,
-                  img: getItemImage(s),
-                  title: s.title || s.name,
-                  price: formatDrawerPrice(s.price),
-                  vendor_id: s.vendor_id,
-                  description: s.description,
-                });
-              }}
             />
 
             {tab === "produtos" && (
@@ -783,22 +782,17 @@ function Index() {
                     {visibleProducts.map((p: any) => (
                       <ProductCard
                         key={p.id}
-                        product={p}
+                        product={{
+                          ...p,
+                          variants: p.variants || null,
+                        }}
                         onBuy={() => {
                           recordInteraction(p);
                           setBuyModalItem(p);
                         }}
                         onDetails={() => {
                           recordInteraction(p);
-                          setDrawerItem({
-                            kind: "product",
-                            item_id: p.id,
-                            img: getItemImage(p),
-                            title: p.name,
-                            price: formatDrawerPrice(p.price),
-                            vendor_id: p.vendor_id,
-                            description: p.description,
-                          });
+                          setDetailModalItem(p);
                         }}
                       />
                     ))}
@@ -831,27 +825,11 @@ function Index() {
                         service={s}
                         onBook={() => {
                           recordInteraction(s);
-                          setDrawerItem({
-                            kind: "service",
-                            item_id: s.id,
-                            img: getItemImage(s),
-                            title: s.title || s.name,
-                            price: formatDrawerPrice(s.price),
-                            vendor_id: s.vendor_id,
-                            description: s.description,
-                          });
+                          setBuyModalItem(s);
                         }}
                         onDetails={() => {
                           recordInteraction(s);
-                          setDrawerItem({
-                            kind: "service",
-                            item_id: s.id,
-                            img: getItemImage(s),
-                            title: s.title || s.name,
-                            price: formatDrawerPrice(s.price),
-                            vendor_id: s.vendor_id,
-                            description: s.description,
-                          });
+                          setDetailModalItem(s);
                         }}
                       />
                     ))}
@@ -1008,7 +986,6 @@ function Index() {
         </div>
       </footer>
 
-      <ItemDrawer item={drawerItem} onClose={() => setDrawerItem(null)} onConfirm={confirm} />
       <BuyModal
         open={!!buyModalItem}
         onClose={() => setBuyModalItem(null)}
@@ -1020,7 +997,13 @@ function Index() {
           whatsapp: buyModalItem.whatsapp,
           vendor_phone: buyModalItem.vendor_phone,
           phone: buyModalItem.phone,
+          variants: buyModalItem.variants || null,
         } : { name: "", price: 0, category: "", store: "" }}
+      />
+      <DetailModal
+        open={!!detailModalItem}
+        onClose={() => setDetailModalItem(null)}
+        item={detailModalItem || {}}
       />
       <CartSheet
         open={cartOpen}
@@ -1056,15 +1039,11 @@ function SearchResultsView({
   loading,
   products,
   services,
-  onProductClick,
-  onServiceClick,
 }: {
   query: string;
   loading: boolean;
   products: any[];
   services: any[];
-  onProductClick: (product: any) => void;
-  onServiceClick: (service: any) => void;
 }) {
   const hasResults = products.length > 0 || services.length > 0;
 
@@ -1087,9 +1066,18 @@ function SearchResultsView({
                 {products.map((product: any) => (
                   <ProductCard
                     key={product.id}
-                    product={product}
-                    onBuy={() => setBuyModalItem(product)}
-                    onDetails={() => onProductClick(product)}
+                    product={{
+                      ...product,
+                      variants: product.variants || null,
+                    }}
+                        onBuy={() => {
+                          recordInteraction(product);
+                          setBuyModalItem(product);
+                        }}
+                        onDetails={() => {
+                          recordInteraction(product);
+                          setDetailModalItem(product);
+                        }}
                   />
                 ))}
               </div>
@@ -1104,12 +1092,19 @@ function SearchResultsView({
                   <ServiceCard
                     key={service.id}
                     service={service}
-                    onBook={() => setBuyModalItem({
-                      ...service,
-                      name: service.name || service.title,
-                      store: service.store || service.vendor_name,
-                    })}
-                    onDetails={() => onServiceClick(service)}
+                    onBook={() => {
+                      recordInteraction(service);
+                      setBuyModalItem({
+                        ...service,
+                        name: service.name || service.title,
+                        store: service.store || service.vendor_name,
+                        variants: service.variants || null,
+                      });
+                    }}
+                    onDetails={() => {
+                      recordInteraction(service);
+                      setDetailModalItem(service);
+                    }}
                   />
                 ))}
               </div>
@@ -1123,12 +1118,8 @@ function SearchResultsView({
 
 function ForYouFeed({
   items,
-  onProductClick,
-  onServiceClick,
 }: {
   items: any[];
-  onProductClick: (product: any) => void;
-  onServiceClick: (service: any) => void;
 }) {
   return (
     <section id="for-you-feed" className="pt-5">
@@ -1161,9 +1152,16 @@ function ForYouFeed({
                         /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url),
                       ) ||
                       "",
+                    variants: item.variants || null,
                   }}
-                  onBuy={() => setBuyModalItem(item)}
-                  onDetails={() => onProductClick(item)}
+                  onBuy={() => {
+                    recordInteraction(item);
+                    setBuyModalItem(item);
+                  }}
+                  onDetails={() => {
+                    recordInteraction(item);
+                    setDetailModalItem(item);
+                  }}
                 />
               </div>
             ) : (
@@ -1186,12 +1184,18 @@ function ForYouFeed({
                       ) ||
                       "",
                   }}
-                  onBook={() => setBuyModalItem({
-                    ...item,
-                    name: item.name || item.title,
-                    store: item.store || item.vendor_name,
-                  })}
-                  onDetails={() => onServiceClick(item)}
+                  onBook={() => {
+                    recordInteraction(item);
+                    setBuyModalItem({
+                      ...item,
+                      name: item.name || item.title,
+                      store: item.store || item.vendor_name,
+                    });
+                  }}
+                  onDetails={() => {
+                    recordInteraction(item);
+                    setDetailModalItem(item);
+                  }}
                 />
               </div>
             ),
