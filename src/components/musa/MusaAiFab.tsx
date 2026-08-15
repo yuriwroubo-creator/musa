@@ -1,11 +1,84 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Loader2, Send, Sparkles, X } from "lucide-react";
+import { Loader2, Send, Sparkles, X } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { musaAssistantFn } from "@/lib/musa-ai.functions";
 import { cn } from "@/lib/utils";
 import { getTasteProfile } from "@/lib/personalization";
 import { useAuth } from "@/hooks/useAuth";
+import { MusaAiLogo } from "./MusaAiLogo";
+import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+// Custom markdown components for rich styling
+const MarkdownComponents = {
+  h1: ({ children }: { children: React.ReactNode }) => (
+    <h1 className="text-lg font-bold mb-3 text-white">{children}</h1>
+  ),
+  h2: ({ children }: { children: React.ReactNode }) => (
+    <h2 className="text-base font-bold mb-2 text-white/90">{children}</h2>
+  ),
+  h3: ({ children }: { children: React.ReactNode }) => (
+    <h3 className="text-sm font-bold mb-2 text-white/80">{children}</h3>
+  ),
+  p: ({ children }: { children: React.ReactNode }) => (
+    <p className="mb-3 leading-relaxed">{children}</p>
+  ),
+  ul: ({ children }: { children: React.ReactNode }) => (
+    <ul className="mb-3 ml-4 list-disc space-y-1 text-white/90">{children}</ul>
+  ),
+  ol: ({ children }: { children: React.ReactNode }) => (
+    <ol className="mb-3 ml-4 list-decimal space-y-1 text-white/90">{children}</ol>
+  ),
+  li: ({ children }: { children: React.ReactNode }) => (
+    <li className="text-sm">{children}</li>
+  ),
+  strong: ({ children }: { children: React.ReactNode }) => (
+    <strong className="font-semibold text-white">{children}</strong>
+  ),
+  em: ({ children }: { children: React.ReactNode }) => (
+    <em className="italic text-white/90">{children}</em>
+  ),
+  code: ({ children }: { children: React.ReactNode }) => (
+    <code className="bg-white/10 px-1.5 py-0.5 rounded text-xs font-mono text-white/90">{children}</code>
+  ),
+  blockquote: ({ children }: { children: React.ReactNode }) => (
+    <blockquote className="border-l-2 border-white/20 pl-3 italic text-white/70 my-3">{children}</blockquote>
+  ),
+  table: ({ children }: { children: React.ReactNode }) => (
+    <div className="overflow-x-auto my-3">
+      <table className="min-w-full border border-white/10 rounded-lg overflow-hidden">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }: { children: React.ReactNode }) => (
+    <thead className="bg-white/10">{children}</thead>
+  ),
+  tbody: ({ children }: { children: React.ReactNode }) => (
+    <tbody className="divide-y divide-white/10">{children}</tbody>
+  ),
+  tr: ({ children }: { children: React.ReactNode }) => (
+    <tr className="hover:bg-white/5 transition-colors">{children}</tr>
+  ),
+  th: ({ children }: { children: React.ReactNode }) => (
+    <th className="px-3 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">{children}</th>
+  ),
+  td: ({ children }: { children: React.ReactNode }) => (
+    <td className="px-3 py-2 text-sm text-white/90">{children}</td>
+  ),
+  a: ({ children, href }: { children: React.ReactNode; href?: string }) => (
+    <a 
+      href={href} 
+      className="text-[#FF5BA3] hover:text-[#FF2D78] underline transition-colors"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {children}
+    </a>
+  ),
+};
 
 type ChatMessage = {
   role: "assistant" | "user";
@@ -20,7 +93,7 @@ export function MusaAiFab() {
     {
       role: "assistant",
       content:
-        "Olá, sou a Musa AI. Posso ajudar-te a descobrir produtos, serviços e criadoras na MUSA.",
+        "Olá! Sou a Musa AI, tua assistente premium da MUSA. Posso ajudar-te a descobrir produtos, serviços e criadoras, além de dar conselhos de negócio para melhorar as tuas vendas.",
     },
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -72,7 +145,7 @@ export function MusaAiFab() {
         aria-label="Abrir Musa AI"
       >
         <span className="flex size-9 items-center justify-center rounded-full bg-white/12">
-          <Bot className="size-5" />
+          <MusaAiLogo className="size-6" />
         </span>
         <span className="hidden flex-col items-start text-left sm:flex">
           <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/65">
@@ -83,33 +156,46 @@ export function MusaAiFab() {
         <Sparkles className="size-4 opacity-80" />
       </button>
 
-      <div
-        className={cn(
-          "fixed inset-0 z-[110] bg-black/35 backdrop-blur-sm transition-opacity duration-300",
-          open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[110] bg-black/35 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
         )}
-        onClick={() => setOpen(false)}
-        aria-hidden="true"
-      />
+      </AnimatePresence>
 
-      <aside
-        className={cn(
-          "fixed right-0 top-0 z-[115] flex h-full w-full max-w-[430px] flex-col border-l border-white/10 bg-[linear-gradient(180deg,rgba(12,12,16,.99),rgba(18,16,24,.98))] text-white shadow-[0_30px_80px_rgba(0,0,0,.45)] transition-transform duration-300 ease-[cubic-bezier(.2,.8,.2,1)]",
-          open ? "translate-x-0" : "translate-x-full",
-        )}
-        aria-label="Musa AI"
-      >
-        <div className="border-b border-white/10 px-5 py-4">
+      <AnimatePresence>
+        {open && (
+          <motion.aside
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+            className="fixed right-0 top-0 z-[115] flex h-full w-full max-w-[430px] flex-col border-l border-white/10 bg-[linear-gradient(180deg,rgba(12,12,16,.99),rgba(18,16,24,.98))] text-white shadow-[0_30px_80px_rgba(0,0,0,.45)]"
+            aria-label="Musa AI"
+          >
+        <div className="border-b border-white/10 px-5 py-5">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/65">
-                <Sparkles className="size-3.5" />
-                Luanda, Angola
-              </p>
-              <h2 className="mt-3 text-2xl font-black">Musa AI</h2>
-              <p className="mt-1 text-sm leading-6 text-white/60">
-                Descobre lojas, produtos e serviços dentro da plataforma.
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-[#FF2D78] to-[#FF5BA3] shadow-[0_8px_24px_rgba(255,45,120,.3)]">
+                <MusaAiLogo className="size-7" />
+              </div>
+              <div>
+                <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/65">
+                  <Sparkles className="size-3.5" />
+                  Luanda, Angola
+                </p>
+                <h2 className="mt-2 text-2xl font-black tracking-tight">Musa AI</h2>
+                <p className="mt-1 text-sm leading-relaxed text-white/70 font-light">
+                  Sua assistente premium para negócios e descobertas na MUSA.
+                </p>
+              </div>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -121,32 +207,49 @@ export function MusaAiFab() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <div className="space-y-3">
+        <div className="flex-1 overflow-y-auto px-5 py-5">
+          <div className="space-y-4">
             {messages.map((message, index) => (
-              <div
+              <motion.div
                 key={`${message.role}-${index}`}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
                 className={cn(
-                  "max-w-[92%] rounded-[24px] px-4 py-3 text-sm leading-6 shadow-sm",
+                  "max-w-[90%] rounded-[28px] px-5 py-4 text-[14px] leading-relaxed shadow-sm font-light",
                   message.role === "user"
-                    ? "ml-auto bg-primary text-primary-foreground"
-                    : "bg-white/8 text-white/90",
+                    ? "ml-auto bg-gradient-to-br from-[#FF2D78] to-[#FF5BA3] text-white"
+                    : "bg-white/10 text-white/95 backdrop-blur-sm border border-white/5",
                 )}
               >
-                {message.content}
-              </div>
+                {message.role === "assistant" ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={MarkdownComponents}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                ) : (
+                  message.content
+                )}
+              </motion.div>
             ))}
             {mutation.isPending && (
-              <div className="flex items-center gap-2 rounded-[24px] bg-white/8 px-4 py-3 text-sm text-white/70">
-                <Loader2 className="size-4 animate-spin" />A pensar...
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-3 rounded-[28px] bg-white/10 px-5 py-4 text-sm text-white/70 backdrop-blur-sm border border-white/5"
+              >
+                <Loader2 className="size-4 animate-spin" />
+                <span className="font-light">A pensar...</span>
+              </motion.div>
             )}
             <div ref={bottomRef} />
           </div>
         </div>
 
-        <div className="border-t border-white/10 p-4">
-          <div className="rounded-[24px] border border-white/10 bg-white/6 p-3">
+        <div className="border-t border-white/10 p-5">
+          <div className="rounded-[28px] border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
@@ -157,17 +260,17 @@ export function MusaAiFab() {
                 }
               }}
               rows={3}
-              placeholder="Pergunta algo sobre a MUSA..."
-              className="w-full resize-none bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+              placeholder="Pergunta algo sobre a MUSA, negócios ou melhoria de vendas..."
+              className="w-full resize-none bg-transparent text-[14px] text-white outline-none placeholder:text-white/35 font-light leading-relaxed"
             />
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="text-[10px] font-medium text-white/42">
-                Responde apenas dentro do contexto da plataforma.
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <span className="text-[10px] font-light text-white/40">
+                Assistente de negócios e descobertas
               </span>
               <button
                 onClick={sendMessage}
                 disabled={mutation.isPending || !input.trim()}
-                className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-[12px] font-bold text-primary-foreground shadow-[0_14px_30px_rgba(255,45,120,.35)] disabled:opacity-50"
+                className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] px-5 py-2.5 text-[12px] font-bold text-white shadow-[0_14px_30px_rgba(255,45,120,.35)] disabled:opacity-50 disabled:shadow-none transition-all hover:shadow-[0_16px_36px_rgba(255,45,120,.45)]"
               >
                 <Send className="size-4" />
                 Enviar
@@ -175,7 +278,9 @@ export function MusaAiFab() {
             </div>
           </div>
         </div>
-      </aside>
+      </motion.aside>
+        )}
+      </AnimatePresence>
     </>
   );
 }
