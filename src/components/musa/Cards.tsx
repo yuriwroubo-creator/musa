@@ -1,4 +1,4 @@
-import { Star, Check, MapPin, Heart, Play, MessageCircle } from "lucide-react";
+import { Star, Check, MapPin, Heart, Play, MessageCircle, Store, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Product, Service, Vendor } from "@/lib/musa-data";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -9,10 +9,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAudio } from "@/lib/AudioContext";
 import { PlaceholderArt } from "@/components/musa/PlaceholderArt";
 import { DetailModal } from "./DetailModal";
+import { useNavigate } from "@tanstack/react-router";
 
 function formatPrice(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    return `${value.toLocaleString("pt-AO")} Kz`;
+    return new Intl.NumberFormat("pt-AO", {
+      style: "currency",
+      currency: "AOA",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
   }
   if (typeof value === "string" && value.trim()) return value;
   return "Preço sob consulta";
@@ -31,6 +37,7 @@ export function ProductCard({
   const { signInWithGoogle, user } = useAuth();
   const { play, currentTrack, isPlaying, pause } = useAudio();
   const { checkIsFollowing, toggleFollow } = useFollows();
+  const navigate = useNavigate();
 
   const isFavorite = checkIsFavorite(product.id);
   const isFollowing = product.vendor_id ? checkIsFollowing(product.vendor_id) : false;
@@ -45,6 +52,23 @@ export function ProductCard({
   const displayPrice = formatPrice(product.price);
   const displayImage = imageUrl || product.image_url || "";
   const displayRating = product.rating || "Novo";
+  const storeId = product.vendor_id || product.store_id || null;
+
+  // Fetch store profile for avatar
+  const { data: storeProfile } = useQuery({
+    queryKey: ["store-profile", storeId],
+    queryFn: async () => {
+      if (!storeId) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", storeId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!storeId,
+  });
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -65,9 +89,54 @@ export function ProductCard({
     toggleFollow.mutate({ followingId: product.vendor_id, isFollowing });
   };
 
+  const handleStoreClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (storeId) {
+      navigate({ to: "/store/$id", params: { id: storeId } });
+    }
+  };
+
+  const handleBuyClick = () => {
+    onBuy();
+  };
+
+  const handleDetailsClick = () => {
+    onDetails();
+  };
+
+  const storeAvatar = storeProfile?.avatar_url || storeProfile?.full_name?.[0] || displayStore[0];
+  const storeName = storeProfile?.full_name || storeProfile?.business_name || displayStore;
+
   return (
     <article className="group luxe-card animate-rise flex flex-col overflow-hidden rounded-[22px] transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
-      <div className="relative aspect-[1/1.18] w-full overflow-hidden bg-muted">
+      {/* Topo: Avatar + Nome da Loja */}
+      <div 
+        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors"
+        onClick={handleStoreClick}
+      >
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20 overflow-hidden">
+          {storeProfile?.avatar_url ? (
+            <img 
+              src={storeProfile.avatar_url} 
+              alt={storeName}
+              className="size-full object-cover"
+            />
+          ) : (
+            <span className="text-xs font-bold text-primary">
+              {storeAvatar}
+            </span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] font-semibold text-foreground">
+            {storeName}
+          </p>
+        </div>
+        <Store className="size-3.5 text-muted-foreground" />
+      </div>
+
+      {/* Corpo: Imagem do produto */}
+      <div className="relative aspect-square w-full overflow-hidden bg-muted">
         {displayImage ? (
           <img
             src={displayImage}
@@ -113,10 +182,6 @@ export function ProductCard({
             </div>
           </button>
         )}
-        <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/88 px-2 py-1 text-[10px] font-bold text-foreground backdrop-blur-sm">
-          <Star className="size-2.5 fill-primary text-primary" />
-          {product.rating}
-        </span>
         <button
           onClick={handleFavoriteClick}
           disabled={toggleFavorite.isPending}
@@ -130,63 +195,45 @@ export function ProductCard({
             )}
           />
         </button>
-        {product.vendor_id && (
-          <button
-            onClick={handleFollowClick}
-            disabled={toggleFollow.isPending}
-            aria-label="Seguir a loja"
-            className={cn(
-              "absolute left-2 top-11 flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold backdrop-blur-sm transition-all",
-              isFollowing
-                ? "bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] text-white shadow-[0_4px_16px_rgba(255,45,120,.3)]"
-                : "bg-white/12 text-white/80 shadow-sm hover:scale-[1.02]",
-            )}
-          >
-            {isFollowing ? "A seguir" : "Seguir"}
-          </button>
-        )}
-        <span className="absolute bottom-2 left-2 rounded-full bg-white/16 px-2.5 py-1 text-[9.5px] font-bold text-white backdrop-blur-md">
-          {product.category}
-        </span>
       </div>
-      <div className="flex flex-1 flex-col gap-2 px-4 pb-4 pt-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-white/50">
-          {displayStore}
-        </p>
-        <h3 className="min-h-[36px] text-[15px] font-bold leading-snug text-white">
+
+      {/* Rodapé: Título + Preço + Ações */}
+      <div className="flex flex-1 flex-col gap-2 px-3 pb-3 pt-3">
+        <h3 className="line-clamp-2 text-[14px] font-bold leading-snug text-foreground">
           {displayTitle}
         </h3>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <p className="font-mono text-[13px] font-bold text-[#FF5BA3]">
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-mono text-[13px] font-bold text-primary">
             {displayPrice}
           </p>
         </div>
-        <div className="mt-auto">
-          {product.variants && product.variants.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={onBuy}
-                className="sheen rounded-xl bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] py-2.5 text-[11.5px] font-bold tracking-wide text-white shadow-[0_8px_24px_rgba(255,45,120,.35)] transition-all hover:shadow-[0_12px_32px_rgba(255,45,120,.5)] hover:-translate-y-0.5 active:scale-95"
-              >
-                Opções
-              </button>
-              <button
-                onClick={onDetails}
-                className="rounded-xl border border-white/10 bg-white/8 py-2.5 text-[11.5px] font-bold tracking-wide text-white/90 transition-all hover:border-white/20 hover:bg-white/12 active:scale-95"
-              >
-                Ver mais
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={onBuy}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] py-3 text-[11.5px] font-bold tracking-wide text-white shadow-[0_8px_24px_rgba(255,45,120,.35)] transition-all hover:shadow-[0_12px_32px_rgba(255,45,120,.5)] hover:-translate-y-0.5 active:scale-95"
-            >
-              <MessageCircle className="size-4" />
-              Comprar via WhatsApp
-            </button>
-          )}
+        
+        {/* Ações lado a lado */}
+        <div className="mt-auto grid grid-cols-2 gap-2">
+          <button
+            onClick={handleBuyClick}
+            className="sheen rounded-xl bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] py-2.5 text-[11.5px] font-bold tracking-wide text-white shadow-[0_8px_24px_rgba(255,45,120,.35)] transition-all hover:shadow-[0_12px_32px_rgba(255,45,120,.5)] hover:-translate-y-0.5 active:scale-95"
+          >
+            Comprar
+          </button>
+          <button
+            onClick={handleDetailsClick}
+            className="rounded-xl border border-white/10 bg-white/8 py-2.5 text-[11.5px] font-bold tracking-wide text-white/90 transition-all hover:border-white/20 hover:bg-white/12 active:scale-95"
+          >
+            Ver mais
+          </button>
         </div>
+
+        {/* Link subtil Visitar Loja */}
+        {storeId && (
+          <button
+            onClick={handleStoreClick}
+            className="mt-2 text-[10px] font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+          >
+            <Store className="size-3" />
+            Visitar Loja
+          </button>
+        )}
       </div>
     </article>
   );

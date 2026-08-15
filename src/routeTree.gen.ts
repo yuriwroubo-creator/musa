@@ -14,7 +14,9 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FavoritosRouteImport } from './routes/favoritos'
 import { Route as MensagensRouteImport } from './routes/mensagens'
 import { Route as PerfilRouteImport } from './routes/perfil'
+import { Route as ReelsRouteImport } from './routes/reels'
 import { Route as ChatConversationIdRouteImport } from './routes/chat.$conversationId'
+import { Route as StoreIdRouteImport } from './routes/store.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,9 +43,19 @@ const PerfilRoute = PerfilRouteImport.update({
   path: '/perfil',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReelsRoute = ReelsRouteImport.update({
+  id: '/reels',
+  path: '/reels',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChatConversationIdRoute = ChatConversationIdRouteImport.update({
   id: '/chat/$conversationId',
   path: '/chat/$conversationId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoreIdRoute = StoreIdRouteImport.update({
+  id: '/store/$id',
+  path: '/store/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -53,7 +65,9 @@ export interface FileRoutesByFullPath {
   '/favoritos': typeof FavoritosRoute
   '/mensagens': typeof MensagensRoute
   '/perfil': typeof PerfilRoute
+  '/reels': typeof ReelsRoute
   '/chat/$conversationId': typeof ChatConversationIdRoute
+  '/store/$id': typeof StoreIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -61,7 +75,9 @@ export interface FileRoutesByTo {
   '/favoritos': typeof FavoritosRoute
   '/mensagens': typeof MensagensRoute
   '/perfil': typeof PerfilRoute
+  '/reels': typeof ReelsRoute
   '/chat/$conversationId': typeof ChatConversationIdRoute
+  '/store/$id': typeof StoreIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -70,7 +86,9 @@ export interface FileRoutesById {
   '/favoritos': typeof FavoritosRoute
   '/mensagens': typeof MensagensRoute
   '/perfil': typeof PerfilRoute
+  '/reels': typeof ReelsRoute
   '/chat/$conversationId': typeof ChatConversationIdRoute
+  '/store/$id': typeof StoreIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -80,7 +98,9 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/mensagens'
     | '/perfil'
+    | '/reels'
     | '/chat/$conversationId'
+    | '/store/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -88,7 +108,9 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/mensagens'
     | '/perfil'
+    | '/reels'
     | '/chat/$conversationId'
+    | '/store/$id'
   id:
     | '__root__'
     | '/'
@@ -96,7 +118,9 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/mensagens'
     | '/perfil'
+    | '/reels'
     | '/chat/$conversationId'
+    | '/store/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -105,7 +129,9 @@ export interface RootRouteChildren {
   FavoritosRoute: typeof FavoritosRoute
   MensagensRoute: typeof MensagensRoute
   PerfilRoute: typeof PerfilRoute
+  ReelsRoute: typeof ReelsRoute
   ChatConversationIdRoute: typeof ChatConversationIdRoute
+  StoreIdRoute: typeof StoreIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -145,11 +171,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PerfilRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reels': {
+      id: '/reels'
+      path: '/reels'
+      fullPath: '/reels'
+      preLoaderRoute: typeof ReelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chat/$conversationId': {
       id: '/chat/$conversationId'
       path: '/chat/$conversationId'
       fullPath: '/chat/$conversationId'
       preLoaderRoute: typeof ChatConversationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/store/$id': {
+      id: '/store/$id'
+      path: '/store/$id'
+      fullPath: '/store/$id'
+      preLoaderRoute: typeof StoreIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -161,7 +201,9 @@ const rootRouteChildren: RootRouteChildren = {
   FavoritosRoute: FavoritosRoute,
   MensagensRoute: MensagensRoute,
   PerfilRoute: PerfilRoute,
+  ReelsRoute: ReelsRoute,
   ChatConversationIdRoute: ChatConversationIdRoute,
+  StoreIdRoute: StoreIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

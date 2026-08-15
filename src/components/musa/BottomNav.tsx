@@ -1,4 +1,4 @@
-import { Home, Sparkles, PlusSquare, Heart, User } from "lucide-react";
+import { Home, Clapperboard, PlusSquare, Heart, User } from "lucide-react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ interface BottomNavProps {
 
 const navItems = [
   { icon: Home, label: "Início", path: "/" },
-  { icon: Sparkles, label: "Para você", path: "/", action: "feed" },
+  { icon: Clapperboard, label: "Reels", path: "/reels" },
   { icon: PlusSquare, label: "Publicar", path: null, action: "sell" },
   { icon: Heart, label: "Favoritos", path: "/favoritos", requiresAuth: true },
   { icon: User, label: "Perfil", path: "/perfil", requiresAuth: true },
@@ -29,18 +29,6 @@ export function BottomNav({ onSellClick, onSearchClick }: BottomNavProps) {
     }
     if (item.action === "search") {
       onSearchClick?.();
-      return;
-    }
-    if (item.action === "feed") {
-      navigate({ to: "/" });
-      window.setTimeout(() => {
-        const feed = document.getElementById("for-you-feed");
-        if (feed) {
-          feed.scrollIntoView({ behavior: "smooth", block: "start" });
-        } else {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
-      }, 80);
       return;
     }
     if (item.requiresAuth && !user) {

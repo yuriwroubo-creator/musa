@@ -47,7 +47,8 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Tab = "produtos" | "servicos" | "lojas" | "seguidoras";
+// TODO: fase futura - tabs
+// type Tab = "produtos" | "servicos" | "lojas" | "seguidoras";
 type CartEntry = {
   id: string;
   quantity: number;
@@ -57,12 +58,13 @@ type CartEntry = {
   kind: string;
 };
 
-const tabs: { id: Tab; label: string; emoji: string }[] = [
-  { id: "produtos", label: "Produtos", emoji: "🛍️" },
-  { id: "servicos", label: "Serviços", emoji: "✨" },
-  { id: "lojas", label: "Lojas & Marcas", emoji: "🏪" },
-  { id: "seguidoras", label: "A Seguir", emoji: "💖" },
-];
+// TODO: fase futura - tabs
+// const tabs: { id: Tab; label: string; emoji: string }[] = [
+//   { id: "produtos", label: "Produtos", emoji: "🛍️" },
+//   { id: "servicos", label: "Serviços", emoji: "✨" },
+//   { id: "lojas", label: "Lojas & Marcas", emoji: "🏪" },
+//   { id: "seguidoras", label: "A Seguir", emoji: "💖" },
+// ];
 
 function normalizeSearch(value: unknown) {
   return String(value ?? "")
@@ -181,9 +183,6 @@ function readStoredCart() {
 }
 
 function Index() {
-  const [tab, setTab] = useState<Tab>("produtos");
-  const [prodCat, setProdCat] = useState("Todos");
-  const [svcCat, setSvcCat] = useState("Todos");
   const [query, setQuery] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
   const [buyModalItem, setBuyModalItem] = useState<any | null>(null);
@@ -516,14 +515,12 @@ function Index() {
         .sort((a: any, b: any) => b._score - a._score)
         .slice(0, 24);
     }
-    const filtered = baseProducts.filter(
-      (p: any) => prodCat === "Todos" || prodCat === "Promoções" || p.category === prodCat,
-    );
-    return [...filtered].sort(
+    // TODO: fase futura - filtrar por categorias se necessário
+    return [...baseProducts].sort(
       (a: any, b: any) =>
         scoreCatalogItem(b, tasteProfile, query) - scoreCatalogItem(a, tasteProfile, query),
     );
-  }, [q, searchResults, databaseSearchResults, prodCat, baseProducts, tasteProfile, query]);
+  }, [q, searchResults, databaseSearchResults, baseProducts, tasteProfile, query]);
 
   const visibleServices = useMemo(() => {
     if (q !== "") {
@@ -582,12 +579,12 @@ function Index() {
         .sort((a: any, b: any) => b._score - a._score)
         .slice(0, 24);
     }
-    const filtered = baseServices.filter((s: any) => svcCat === "Todos" || s.category === svcCat);
-    return [...filtered].sort(
+    // TODO: fase futura - filtrar por categorias se necessário
+    return [...baseServices].sort(
       (a: any, b: any) =>
         scoreCatalogItem(b, tasteProfile, query) - scoreCatalogItem(a, tasteProfile, query),
     );
-  }, [q, searchResults, databaseSearchResults, svcCat, baseServices, tasteProfile, query]);
+  }, [q, searchResults, databaseSearchResults, baseServices, tasteProfile, query]);
 
   const forYouItems = useMemo(() => {
     const productItems = [...baseProducts].map((item: any) => ({
@@ -656,10 +653,8 @@ function Index() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          if (tab === "produtos" && hasNextProducts && !isFetchingNextProducts) {
+          if (hasNextProducts && !isFetchingNextProducts) {
             fetchNextProducts();
-          } else if (tab === "servicos" && hasNextServices && !isFetchingNextServices) {
-            fetchNextServices();
           }
         }
       },
@@ -671,13 +666,9 @@ function Index() {
     }
     return () => observer.disconnect();
   }, [
-    tab,
     hasNextProducts,
     isFetchingNextProducts,
     fetchNextProducts,
-    hasNextServices,
-    isFetchingNextServices,
-    fetchNextServices,
   ]);
 
   return (
@@ -698,7 +689,8 @@ function Index() {
           onSellClick={() => setSellOpen(true)}
         />
 
-        <StoryRail
+        {/* TODO: fase futura - StoryRail com categorias */}
+        {/* <StoryRail
           categories={tasteOptions}
           selected={tab === "produtos" ? prodCat : svcCat}
           onSelect={(category) => {
@@ -711,10 +703,10 @@ function Index() {
               setProdCat(category);
             }
           }}
-        />
+        /> */}
 
-        {/* Tabs */}
-        <div
+        {/* TODO: fase futura - Tabs */}
+        {/* <div
           role="tablist"
           className="glass-panel mt-4 flex gap-1.5 rounded-2xl p-1 lg:mx-auto lg:mt-8 lg:max-w-xl"
         >
@@ -735,7 +727,7 @@ function Index() {
               {t.label}
             </button>
           ))}
-        </div>
+        </div> */}
 
         {q !== "" ? (
           <SearchResultsView
@@ -750,152 +742,49 @@ function Index() {
               items={forYouItems}
             />
 
-            {tab === "produtos" && (
-              <section>
-                <Pills options={productCategories} value={prodCat} onChange={setProdCat} />
-                <SectionTitle title="Selecionado para si" sub="" />
-                {errorProducts ? (
-                  <ErrorState message="Não foi possível carregar os produtos. Tenta novamente." />
-                ) : loadingProducts ? (
-                  <LoadingGrid />
-                ) : visibleProducts.length === 0 ? (
-                  <Empty message="Ainda não há produtos disponíveis nesta categoria." />
-                ) : (
-                  <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-                    {visibleProducts.map((p: any) => (
-                      <ProductCard
-                        key={p.id}
-                        product={{
-                          ...p,
-                          variants: p.variants || null,
-                        }}
-                        onBuy={() => {
-                          recordInteraction(p);
-                          setBuyModalItem(p);
-                        }}
-                        onDetails={() => {
-                          recordInteraction(p);
-                          setDetailModalItem(p);
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {(hasNextProducts || isFetchingNextProducts) && visibleProducts.length > 0 && (
-                  <div ref={loadMoreRef} className="py-8 text-center">
-                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  </div>
-                )}
-              </section>
-            )}
-
-            {tab === "servicos" && (
-              <section>
-                <Pills options={serviceCategories} value={svcCat} onChange={setSvcCat} />
-                <SectionTitle title="Profissionais perto de si" sub="" />
-                {errorServices ? (
-                  <ErrorState message="Não foi possível carregar os serviços. Tenta novamente." />
-                ) : loadingServices ? (
-                  <LoadingGrid />
-                ) : visibleServices.length === 0 ? (
-                  <Empty message="Ainda não há serviços disponíveis nesta categoria." />
-                ) : (
-                  <div className="grid gap-3 pt-3.5 lg:grid-cols-2 lg:gap-4">
-                    {visibleServices.map((s: any) => (
-                      <ServiceCard
-                        key={s.id}
-                        service={s}
-                        onBook={() => {
-                          recordInteraction(s);
-                          setBuyModalItem(s);
-                        }}
-                        onDetails={() => {
-                          recordInteraction(s);
-                          setDetailModalItem(s);
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {(hasNextServices || isFetchingNextServices) && visibleServices.length > 0 && (
-                  <div ref={loadMoreRef} className="py-8 text-center">
-                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  </div>
-                )}
-              </section>
-            )}
-
-            {tab === "lojas" && (
-              <section>
-                <SectionTitle title="Marcas verificadas" sub="Empreendedoras da comunidade MUSA" />
-                {errorVendors ? (
-                  <ErrorState message="Não foi possível carregar as marcas. Tenta novamente." />
-                ) : loadingVendors ? (
-                  <LoadingGrid />
-                ) : baseVendors.length === 0 ? (
-                  <Empty message="Ainda não existem lojas registadas." />
-                ) : (
-                  <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-                    {visibleVendors.map((v: any) => (
-                      <VendorCard
-                        key={v.id || v.serial_id}
-                        vendor={{ ...v, name: v.name || v.business_name || v.full_name }}
-                      />
-                    ))}
-                  </div>
-                )}
-                <div className="mx-auto my-6 h-px max-w-md bg-gradient-to-r from-transparent via-primary to-transparent opacity-35" />
-                <div className="neon-halo ink-panel overflow-hidden rounded-[20px] px-6 py-7 lg:px-10 lg:py-10">
-                  <h3 className="display relative text-[17px] lg:text-2xl">
-                    Tem um negócio de beleza?
-                  </h3>
-                  <p className="relative mt-1.5 max-w-md text-[11.5px] opacity-65 lg:text-sm">
-                    Junte-se à MUSA e venda para milhares de clientes em Luanda.{" "}
-                    <span className="font-semibold opacity-100">Publicação 100% gratuita.</span>
-                  </p>
-                  <button
-                    onClick={() => setSellOpen(true)}
-                    className="relative mt-3.5 rounded-xl bg-primary px-5 py-2.5 text-[11.5px] font-bold text-primary-foreground shadow-neon"
-                  >
-                    Começar a vender — Grátis
-                  </button>
+            {/* Feed principal de produtos combinado com "Para você" */}
+            <section>
+              <SectionTitle title="Para você" sub="Produtos e serviços alinhados aos teus gostos" />
+              {errorProducts ? (
+                <ErrorState message="Não foi possível carregar os produtos. Tenta novamente." />
+              ) : loadingProducts ? (
+                <LoadingGrid />
+              ) : visibleProducts.length === 0 ? (
+                <Empty message="Ainda não há produtos para ti." />
+              ) : (
+                <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+                  {visibleProducts.map((p: any) => (
+                    <ProductCard
+                      key={p.id}
+                      product={{
+                        ...p,
+                        variants: p.variants || null,
+                      }}
+                      onBuy={() => {
+                        recordInteraction(p);
+                        setBuyModalItem(p);
+                      }}
+                      onDetails={() => {
+                        recordInteraction(p);
+                        setDetailModalItem(p);
+                      }}
+                    />
+                  ))}
                 </div>
-              </section>
-            )}
+              )}
 
-            {tab === "seguidoras" && (
-              <section>
-                <SectionTitle title="Lojas que segues" sub="Acompanha as tuas marcas favoritas" />
-                {!user ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <p className="mb-4 text-[13px] font-medium text-muted-foreground">
-                      Inicia sessão para ver as lojas que segues.
-                    </p>
-                    <button
-                      onClick={() => signInWithGoogle()}
-                      className="rounded-xl bg-primary px-6 py-2.5 text-[12px] font-bold text-primary-foreground shadow-neon"
-                    >
-                      Iniciar Sessão
-                    </button>
-                  </div>
-                ) : loadingVendors || loadingFollows ? (
-                  <LoadingGrid />
-                ) : followedVendors.length === 0 ? (
-                  <Empty message="Ainda não segues nenhuma loja." />
-                ) : (
-                  <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-                    {visibleFollowedVendors.map((v: any) => (
-                      <VendorCard
-                        key={v.id || v.serial_id}
-                        vendor={{ ...v, name: v.name || v.business_name || v.full_name }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
+              {(hasNextProducts || isFetchingNextProducts) && visibleProducts.length > 0 && (
+                <div ref={loadMoreRef} className="py-8 text-center">
+                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              )}
+            </section>
+
+            {/* TODO: fase futura - serviços tab */}
+
+            {/* TODO: fase futura - lojas tab */}
+
+            {/* TODO: fase futura - seguidoras tab */}
           </>
         )}
       </main>
