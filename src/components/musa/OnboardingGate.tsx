@@ -54,7 +54,7 @@ export function OnboardingGate() {
       const { data, error } = await supabase
         .from("vendor_subscriptions")
         .select("id, business_name, full_name, phone, store_photo_url")
-        .eq("user_id", user.id)
+        .eq("user_id", user?.id)
         .maybeSingle();
       if (error && error.code !== "PGRST116") throw error;
       return (data as VendorRow | null) ?? null;
@@ -80,12 +80,12 @@ export function OnboardingGate() {
     return !vendor.business_name || !vendor.full_name || !vendor.store_photo_url;
   }, [choice, vendor]);
 
-  const onboardingDone = Boolean(
-    user.user_metadata?.musa_onboarding_done || user.user_metadata?.musa_role || readStoredChoice(),
-  );
-  const shouldShowOnboarding = !onboardingDone && isFreshAccount(user.created_at);
-
   if (!mounted || loading || !user) return null;
+
+  const onboardingDone = Boolean(
+    user?.user_metadata?.musa_onboarding_done || user?.user_metadata?.musa_role || readStoredChoice(),
+  );
+  const shouldShowOnboarding = !onboardingDone && isFreshAccount(user?.created_at || null);
   if (!shouldShowOnboarding) return null;
   if (choice === "guest") return null;
   if (choice === "creator" && !creatorNeedsSetup) return null;
@@ -110,7 +110,7 @@ export function OnboardingGate() {
     await supabase
       .from("profiles")
       .update({ full_name: fullName, avatar_url: avatarUrl })
-      .eq("id", user.id);
+      .eq("id", user?.id);
   };
 
   const completeCreatorFlow = async () => {
@@ -146,7 +146,7 @@ export function OnboardingGate() {
       }
 
       await syncProfile(ownerName.trim(), storePhotoUrl);
-      await queryClient.invalidateQueries({ queryKey: ["creator-onboarding-vendor", user.id] });
+      await queryClient.invalidateQueries({ queryKey: ["creator-onboarding-vendor", user?.id] });
       persistChoice("creator");
       toast.success("Loja configurada", {
         description: "A tua marca já está pronta para publicar como criadora.",
