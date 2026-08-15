@@ -161,11 +161,11 @@ export function MusaAiFab() {
       <AnimatePresence>
         {open && (
           <motion.aside
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
-            className="fixed right-0 top-0 z-[115] flex h-full w-full max-w-[430px] flex-col border-l border-white/10 bg-[linear-gradient(180deg,rgba(12,12,16,.99),rgba(18,16,24,.98))] text-white shadow-[0_30px_80px_rgba(0,0,0,.45)]"
+            className="fixed right-4 top-1/2 -translate-y-1/2 z-[115] flex w-[90vw] max-w-[380px] h-[60vh] max-h-[500px] flex-col rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(12,12,16,.99),rgba(18,16,24,.98))] text-white shadow-2xl"
             aria-label="Musa AI"
           >
         <div className="border-b border-white/10 px-5 py-5">

@@ -1,6 +1,7 @@
 import { X, ChevronLeft, Heart, MessageCircle, MapPin, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { useEffect } from "react";
 
 interface DetailModalProps {
   open: boolean;
@@ -35,6 +36,18 @@ export function DetailModal({ open, onClose, item }: DetailModalProps) {
   const images = item.images || item.media_urls || (item.img ? [item.img] : []);
   const whatsappNumber = item.whatsapp || item.vendor_phone || item.phone;
 
+  // Block body scroll when modal is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   const handleWhatsApp = () => {
     if (!whatsappNumber) {
       alert("Número de WhatsApp não disponível.");
@@ -62,11 +75,11 @@ export function DetailModal({ open, onClose, item }: DetailModalProps) {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="w-full max-w-2xl max-h-[90vh] rounded-2xl border border-white/10 bg-[#1a1a2e] text-white shadow-[0_30px_80px_rgba(0,0,0,.5)] overflow-hidden"
+            className="flex w-full max-w-2xl max-h-[85dvh] flex-col rounded-2xl border border-white/10 bg-[#1a1a2e] text-white shadow-[0_30px_80px_rgba(0,0,0,.5)] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 shrink-0">
               <div className="flex items-center gap-3">
                 <button
                   onClick={onClose}
@@ -92,7 +105,7 @@ export function DetailModal({ open, onClose, item }: DetailModalProps) {
             </div>
 
             {/* Content */}
-            <div className="overflow-y-auto p-5 space-y-6">
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
               {/* Image Gallery */}
               {images.length > 0 && (
                 <div className="space-y-3">

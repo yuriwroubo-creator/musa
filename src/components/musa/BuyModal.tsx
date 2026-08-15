@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, ShoppingCart, MessageCircle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -128,6 +128,18 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [customNote, setCustomNote] = useState("");
+
+  // Block body scroll when modal is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   const isService = product.category?.toLowerCase().includes("serviço") || product.category?.toLowerCase().includes("servico");
   const isFood = product.category?.toLowerCase().includes("doces") || product.category?.toLowerCase().includes("catering") || product.category?.toLowerCase().includes("comida");
@@ -303,11 +315,11 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1a1a2e] text-white shadow-[0_30px_80px_rgba(0,0,0,.5)]"
+        className="flex w-full max-w-md max-h-[85dvh] flex-col rounded-2xl border border-white/10 bg-[#1a1a2e] text-white shadow-[0_30px_80px_rgba(0,0,0,.5)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 shrink-0">
           <div>
             <h3 className="text-lg font-bold">{isService ? "Agendar Serviço" : "Comprar Produto"}</h3>
             <p className="text-xs text-white/60">{product.name}</p>
@@ -322,7 +334,7 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
         </div>
 
         {/* Content */}
-        <div className="px-5 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* Product Info */}
           <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
             <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-[#FF2D78] to-[#FF5BA3] text-white">
@@ -418,25 +430,27 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex gap-2 border-t border-white/10 px-5 py-4">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-xl border border-white/10 bg-white/5 py-3 text-xs font-bold text-white/70 transition-colors hover:bg-white/10"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleWhatsAppCheckout}
-            disabled={!isFormValid}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] py-3 text-xs font-bold text-white transition-all hover:shadow-[0_8px_24px_rgba(255,45,120,.4)] disabled:opacity-50 disabled:shadow-none",
-              isFormValid && "shadow-[0_12px_32px_rgba(255,45,120,.5)]",
-            )}
-          >
-            <MessageCircle className="size-4" />
-            {isService ? "Agendar via WhatsApp" : "Comprar via WhatsApp"}
-          </button>
+        {/* Footer - Sticky */}
+        <div className="sticky bottom-0 border-t border-white/10 bg-[#1a1a2e] px-5 py-4 shrink-0">
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-white/10 bg-white/5 py-3 text-xs font-bold text-white/70 transition-colors hover:bg-white/10"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleWhatsAppCheckout}
+              disabled={!isFormValid}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] py-3 text-xs font-bold text-white transition-all hover:shadow-[0_8px_24px_rgba(255,45,120,.4)] disabled:opacity-50 disabled:shadow-none",
+                isFormValid && "shadow-[0_12px_32px_rgba(255,45,120,.5)]",
+              )}
+            >
+              <MessageCircle className="size-4" />
+              {isService ? "Agendar via WhatsApp" : "Comprar via WhatsApp"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

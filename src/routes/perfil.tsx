@@ -2,6 +2,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3,
   Bell,
@@ -27,7 +28,6 @@ import {
   X,
 } from "lucide-react";
 import { SiteHeader } from "@/components/musa/SiteHeader";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSellModal } from "@/lib/SellContext";
@@ -52,7 +52,7 @@ export const Route = createFileRoute("/perfil")({
   component: ProfilePage,
 });
 
-type ProfileTab = "publicacoes" | "atividade" | "estatisticas";
+type ProfileTab = "publicacoes" | "colecoes" | "estatisticas";
 
 function ProfilePage() {
   const { user, loading, signOut } = useAuth();
@@ -189,10 +189,10 @@ function ProfilePage() {
             label="Posts"
           />
           <ProfileTabButton
-            active={tab === "atividade"}
-            onClick={() => setTab("atividade")}
-            icon={<Bell className="size-4" />}
-            label="Actividades"
+            active={tab === "colecoes"}
+            onClick={() => setTab("colecoes")}
+            icon={<Bookmark className="size-4" />}
+            label="Coleções"
           />
           <ProfileTabButton
             active={tab === "estatisticas"}
@@ -206,7 +206,7 @@ function ProfilePage() {
           {tab === "publicacoes" && (
             <ProfileListings vendorId={stats.vendorId} onCreate={() => setSellOpen(true)} />
           )}
-          {tab === "atividade" && <ProfileNotifications />}
+          {tab === "colecoes" && <ProfileCollections />}
           {tab === "estatisticas" && <ProfileStats stats={stats} />}
         </section>
       </main>
@@ -632,40 +632,86 @@ function EditField({
   );
 }
 
-function ProfileNotifications() {
-  const { notifications, markAllAsRead, isLoading } = useNotifications();
+function ProfileCollections() {
+  const { user } = useAuth();
+  const { data: favorites } = useQuery({
+    queryKey: ["user-favorites", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("favorites")
+        .select("*, products(*), services(*)")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
 
-  if (isLoading) return <LoadingTiles />;
-  if (!notifications?.length) {
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  if (!favorites) {
+    return <LoadingTiles />;
+  }
+
+  if (!favorites.length) {
     return (
       <div className="luxe-card rounded-[24px] p-8 text-center">
-        <Bell className="mx-auto mb-3 size-9 text-primary" />
-        <h2 className="text-lg font-black">Sem atividade nova</h2>
+        <Bookmark className="mx-auto mb-3 size-9 text-primary" />
+        <h2 className="text-lg font-black">Sem coleções ainda</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Likes, follows e mensagens aparecem aqui.
+          Os itens que guardares dos Reels aparecerão aqui.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <button onClick={() => markAllAsRead?.()} className="text-xs font-bold text-primary">
-        Marcar tudo como lido
-      </button>
-      {notifications.map((notification: any) => (
-        <div key={notification.id} className="luxe-card flex items-start gap-3 rounded-2xl p-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
-            <Bell className="size-4" />
-          </span>
-          <div>
-            <p className="text-sm font-bold">{notification.title || "Nova atividade"}</p>
-            <p className="text-xs text-muted-foreground">
-              {notification.content || notification.message}
-            </p>
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      {favorites.map((favorite: any) => {
+        const item = favorite.products || favorite.services;
+        if (!item) return null;
+
+        const imageUrl = item.img || item.image_url || item.media_urls?.[0];
+        const title = item.name || item.title || "Sem título";
+        const price = item.price;
+
+        return (
+          <div
+            key={favorite.id}
+            className="luxe-card overflow-hidden rounded-[20px] transition-all hover:-translate-y-1 hover:shadow-luxe"
+          >
+            <div className="relative aspect-square overflow-hidden bg-muted">
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={title}
+                  className="size-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <PlaceholderArt title={title} />
+              )}
+              <div className="absolute top-2 right-2 flex size-8 items-center justify-center rounded-full bg-[#FF5BA3] text-white">
+                <Bookmark className="size-4 fill-current" />
+              </div>
+            </div>
+            <div className="p-3">
+              <h3 className="line-clamp-2 text-sm font-bold">{title}</h3>
+              {price && (
+                <p className="mt-1 text-xs font-bold text-[#FF5BA3]">
+                  {typeof price === "number"
+                    ? new Intl.NumberFormat("pt-AO", {
+                        style: "currency",
+                        currency: "AOA",
+                        minimumFractionDigits: 0,
+                      }).format(price)
+                    : price}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
