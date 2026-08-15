@@ -10,7 +10,7 @@ export const SUPABASE_ANON_KEY =
   env["VITE_SUPABASE_ANON_KEY"] ?? "sb_publishable_zVnmI_eqnA76-FqMZ6m0pg_Cr-BCdKN";
 
 export const TURNSTILE_SITE_KEY =
-  env["VITE_TURNSTILE_SITE_KEY"] ?? "0x4AAAAAAEOVa7pxOjbQ_Wk-";
+  env["VITE_TURNSTILE_SITE_KEY"] ?? "0x4AAAAAAEQs8bt1rI3awIxm";
 
 export const ALGOLIA_APP_ID = env["VITE_ALGOLIA_APP_ID"] ?? "FR7426VGXG";
 export const ALGOLIA_SEARCH_KEY =

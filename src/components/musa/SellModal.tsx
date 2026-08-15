@@ -96,7 +96,9 @@ function validateStep1(shopName: string, ownerName: string, phone: string) {
     errors.push("Escreve o nome completo da titular.");
   }
   const phoneDigits = phone.replace(/\D/g, "");
-  if (phoneDigits.length > 0 && phoneDigits.length < 9) {
+  if (phoneDigits.length === 0) {
+    errors.push("O WhatsApp é obrigatório para todos os posts.");
+  } else if (phoneDigits.length < 9) {
     errors.push("O WhatsApp deve ter pelo menos 9 números.");
   }
   if (hasBlockedWords(shopName, ownerName)) {
@@ -110,6 +112,8 @@ function validateStep2(
   productPrice: string,
   productCategory: string,
   productDesc: string,
+  productType: "produto" | "servico",
+  mediaUrls: string[],
 ) {
   const errors: string[] = [];
   if (meaningfulWords(productName).length < 2) {
@@ -127,6 +131,9 @@ function validateStep2(
   }
   if (hasBlockedWords(productName, productDesc)) {
     errors.push("Remove palavras ofensivas, obscenas ou ilegais da publicação.");
+  }
+  if (productType === "produto" && mediaUrls.length === 0) {
+    errors.push("Produtos requerem pelo menos 1 foto.");
   }
   return errors;
 }
@@ -153,8 +160,8 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
     [shopName, ownerName, phone],
   );
   const step2Errors = useMemo(
-    () => validateStep2(productName, productPrice, productCategory, productDesc),
-    [productName, productPrice, productCategory, productDesc],
+    () => validateStep2(productName, productPrice, productCategory, productDesc, productType, mediaUrls),
+    [productName, productPrice, productCategory, productDesc, productType, mediaUrls],
   );
   const step1Valid = step1Errors.length === 0;
   const step2Valid = step2Errors.length === 0;
@@ -166,6 +173,8 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
         productPrice,
         productCategory,
         productDesc,
+        productType,
+        mediaUrls,
       );
       if (currentStepErrors.length > 0) {
         throw new Error(currentStepErrors[0]);
@@ -339,10 +348,11 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
                 onChange={setOwnerName}
               />
               <Field
-                label="WhatsApp para Clientes"
+                label="WhatsApp para Clientes *"
                 placeholder="Ex: 923 000 000"
                 value={phone}
                 onChange={setPhone}
+                required
               />
               <ValidationList errors={step1Errors} />
 

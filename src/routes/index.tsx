@@ -9,6 +9,7 @@ import { useFollows } from "@/hooks/useFollows";
 import { SiteHeader } from "@/components/musa/SiteHeader";
 import { ProductCard, ServiceCard, VendorCard } from "@/components/musa/Cards";
 import { ItemDrawer, type DrawerItem } from "@/components/musa/ItemDrawer";
+import { BuyModal } from "@/components/musa/BuyModal";
 import { useSellModal } from "@/lib/SellContext";
 import { productCategories, serviceCategories } from "@/lib/musa-data";
 import { cn } from "@/lib/utils";
@@ -179,6 +180,7 @@ function Index() {
   const [query, setQuery] = useState("");
   const [drawerItem, setDrawerItem] = useState<DrawerItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [buyModalItem, setBuyModalItem] = useState<any | null>(null);
   const { setSellOpen } = useSellModal();
   const [cart, setCart] = useState<CartEntry[]>(readStoredCart);
   const [tasteProfile, setTasteProfile] = useState<TasteProfile>(() => getTasteProfile());
@@ -784,15 +786,7 @@ function Index() {
                         product={p}
                         onBuy={() => {
                           recordInteraction(p);
-                          setDrawerItem({
-                            kind: "product",
-                            item_id: p.id,
-                            img: getItemImage(p),
-                            title: p.name,
-                            price: formatDrawerPrice(p.price),
-                            vendor_id: p.vendor_id,
-                            description: p.description,
-                          });
+                          setBuyModalItem(p);
                         }}
                         onDetails={() => {
                           recordInteraction(p);
@@ -1015,6 +1009,19 @@ function Index() {
       </footer>
 
       <ItemDrawer item={drawerItem} onClose={() => setDrawerItem(null)} onConfirm={confirm} />
+      <BuyModal
+        open={!!buyModalItem}
+        onClose={() => setBuyModalItem(null)}
+        product={buyModalItem ? {
+          name: buyModalItem.name || "",
+          price: buyModalItem.price || 0,
+          category: buyModalItem.category || "",
+          store: buyModalItem.store || buyModalItem.vendor_name || "",
+          whatsapp: buyModalItem.whatsapp,
+          vendor_phone: buyModalItem.vendor_phone,
+          phone: buyModalItem.phone,
+        } : { name: "", price: 0, category: "", store: "" }}
+      />
       <CartSheet
         open={cartOpen}
         items={cartItems}
@@ -1081,7 +1088,7 @@ function SearchResultsView({
                   <ProductCard
                     key={product.id}
                     product={product}
-                    onBuy={() => onProductClick(product)}
+                    onBuy={() => setBuyModalItem(product)}
                     onDetails={() => onProductClick(product)}
                   />
                 ))}
@@ -1097,7 +1104,11 @@ function SearchResultsView({
                   <ServiceCard
                     key={service.id}
                     service={service}
-                    onBook={() => onServiceClick(service)}
+                    onBook={() => setBuyModalItem({
+                      ...service,
+                      name: service.name || service.title,
+                      store: service.store || service.vendor_name,
+                    })}
                     onDetails={() => onServiceClick(service)}
                   />
                 ))}
@@ -1151,7 +1162,7 @@ function ForYouFeed({
                       ) ||
                       "",
                   }}
-                  onBuy={() => onProductClick(item)}
+                  onBuy={() => setBuyModalItem(item)}
                   onDetails={() => onProductClick(item)}
                 />
               </div>
@@ -1175,7 +1186,11 @@ function ForYouFeed({
                       ) ||
                       "",
                   }}
-                  onBook={() => onServiceClick(item)}
+                  onBook={() => setBuyModalItem({
+                    ...item,
+                    name: item.name || item.title,
+                    store: item.store || item.vendor_name,
+                  })}
                   onDetails={() => onServiceClick(item)}
                 />
               </div>

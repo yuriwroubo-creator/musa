@@ -45,12 +45,15 @@ interface TurnstileWidgetProps {
 export function TurnstileWidget({ onVerify, onExpire, className }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const isRenderedRef = useRef(false);
   const onVerifyRef = useRef(onVerify);
   const onExpireRef = useRef(onExpire);
   onVerifyRef.current = onVerify;
   onExpireRef.current = onExpire;
 
   useEffect(() => {
+    if (isRenderedRef.current) return;
+    
     let cancelled = false;
     loadScript()
       .then(() => {
@@ -60,6 +63,7 @@ export function TurnstileWidget({ onVerify, onExpire, className }: TurnstileWidg
           callback: (token: string) => onVerifyRef.current(token),
           "expired-callback": () => onExpireRef.current?.(),
         });
+        isRenderedRef.current = true;
       })
       .catch((error) => console.error(error));
 
@@ -68,6 +72,7 @@ export function TurnstileWidget({ onVerify, onExpire, className }: TurnstileWidg
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current);
         widgetIdRef.current = null;
+        isRenderedRef.current = false;
       }
     };
   }, []);
