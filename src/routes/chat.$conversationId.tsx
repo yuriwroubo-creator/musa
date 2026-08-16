@@ -34,6 +34,7 @@ function ChatPage() {
   const { data: conversations } = useConversations();
   const [content, setContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -44,6 +45,24 @@ function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Ensure form is always visible when keyboard is shown
+  useEffect(() => {
+    const formElement = formRef.current;
+    if (!formElement) return;
+
+    const handleFocus = () => {
+      setTimeout(() => {
+        formElement.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 300);
+    };
+
+    const textarea = formElement.querySelector("textarea");
+    if (textarea) {
+      textarea.addEventListener("focus", handleFocus);
+      return () => textarea.removeEventListener("focus", handleFocus);
+    }
+  }, []);
 
   const conversation = useMemo(() => {
     return (conversations || []).find((entry: any) => entry.id === conversationId) as
@@ -198,8 +217,9 @@ function ChatPage() {
       </main>
 
       <form
+        ref={formRef}
         onSubmit={handleSend}
-        className="shrink-0 border-t border-white/10 bg-[#0f0f10]/96 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:px-6"
+        className="shrink-0 border-t border-white/10 bg-[#0f0f10]/96 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:px-6 relative z-50"
       >
         <div className="mx-auto flex w-full max-w-4xl items-end gap-2 rounded-[28px] border border-white/10 bg-white/5 p-3 shadow-[0_14px_30px_rgba(0,0,0,.22)]">
           <textarea
@@ -210,6 +230,9 @@ function ChatPage() {
             enterKeyHint="send"
             autoCapitalize="sentences"
             className="flex-1 resize-none bg-transparent px-1 py-2 text-[14px] leading-relaxed text-white outline-none placeholder:text-white/35 max-h-32"
+            style={{
+              WebkitTouchCallout: "none",
+            }}
           />
           <button
             type="submit"

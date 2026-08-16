@@ -7,6 +7,7 @@ import { useFollows } from "@/hooks/useFollows";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAudio } from "@/lib/AudioContext";
+import { isAudioUrl, isImageUrl } from "@/lib/media";
 import { PlaceholderArt } from "@/components/musa/PlaceholderArt";
 import { DetailModal } from "./DetailModal";
 import { useNavigate, Link } from "@tanstack/react-router";
@@ -52,9 +53,9 @@ export function ProductCard({
 
   const isFavorite = checkIsFavorite(product.id);
   const isFollowing = product.vendor_id ? checkIsFollowing(product.vendor_id) : false;
-  const audioUrl = product.media_urls?.find((url) => url.match(/\.(mp3|wav|aac|ogg)$/i));
+  const audioUrl = product.media_urls?.find((url) => isAudioUrl(url));
   const imageUrl =
-    product.img || product.media_urls?.find((u) => u.match(/\.(jpg|jpeg|png|webp)$/i));
+    product.img || product.media_urls?.find((u) => isImageUrl(u));
   const isThisAudioPlaying = currentTrack === audioUrl && isPlaying;
 
   // Safe fallbacks for rendering

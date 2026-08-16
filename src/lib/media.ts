@@ -64,3 +64,27 @@ export async function normalizeFileForUpload(file: File) {
 export function isOversizedFile(file: File) {
   return file.size > MAX_UPLOAD_FILE_SIZE_BYTES;
 }
+
+export function isAudioUrl(url: string): boolean {
+  if (!url || typeof url !== "string") return false;
+  // Remove query parameters and fragments to get clean filename
+  const urlWithoutParams = url.split("?")[0].split("#")[0];
+  // Check for audio extensions (mp3, wav, aac, m4a, ogg, etc)
+  return /\.(mp3|wav|aac|m4a|ogg|flac|wma)$/i.test(urlWithoutParams);
+}
+
+export function isImageUrl(url: string): boolean {
+  if (!url || typeof url !== "string") return false;
+  // Remove query parameters and fragments to get clean filename
+  const urlWithoutParams = url.split("?")[0].split("#")[0];
+  // Check for image extensions
+  return /\.(jpg|jpeg|png|webp|heic|heif|gif|svg)$/i.test(urlWithoutParams);
+}
+
+export function isVideoUrl(url: string): boolean {
+  if (!url || typeof url !== "string") return false;
+  // Remove query parameters and fragments to get clean filename
+  const urlWithoutParams = url.split("?")[0].split("#")[0];
+  // Check for video extensions
+  return /\.(mp4|webm|ogg|mov|m4v|avi|mkv)$/i.test(urlWithoutParams);
+}

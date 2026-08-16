@@ -13,41 +13,59 @@ export function CommentsModal({ open, onClose, post }: any) {
   const postId = post?.id;
   const postType = post?.type || "product";
 
+  const loadComments = async () => {
+    if (!postId) return;
+
+    const { data, error } = await supabase
+      .from("post_comments")
+      .select("*")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Comments select failed:", error);
+      toast.error(error.message || "Erro ao carregar comentários");
+      return;
+    }
+
+    const userIds = [...new Set((data ?? []).map((comment) => comment.user_id).filter(Boolean))];
+    let profileMap = new Map();
+
+    if (userIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url, username")
+        .in("id", userIds);
+
+      if (!profilesError) {
+        profileMap = new Map((profilesData ?? []).map((profile) => [profile.id, profile]));
+      } else {
+        console.warn("Profiles lookup for comments failed:", profilesError);
+      }
+    }
+
+    const hydratedComments = (data ?? []).map((comment) => ({
+      ...comment,
+      profiles: profileMap.get(comment.user_id) || null,
+      full_name: profileMap.get(comment.user_id)?.full_name || comment.full_name || "Utilizador",
+    }));
+
+    setComments(hydratedComments);
+  };
+
   useEffect(() => {
     // Prevent body scroll when modal is open
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
 
     if (!open || !postId) return;
+
     let cancelled = false;
     setLoading(true);
+
     (async () => {
       try {
-        // First try to fetch with joined profiles
-        const res = await supabase
-          .from("post_comments")
-          .select("*, profiles(id, full_name, avatar_url)")
-          .eq("post_id", postId)
-          .order("created_at", { ascending: true });
-
-        if (res.error) {
-          console.warn("Comments select with profiles failed:", res.error);
-          // fallback to simple select (no join) in case RLS or relation issues exist
-          const res2 = await supabase
-            .from("post_comments")
-            .select("*")
-            .eq("post_id", postId)
-            .order("created_at", { ascending: true });
-
-          if (res2.error) {
-            console.error("Fallback comments select also failed:", res2.error);
-            toast.error(res2.error.message || "Erro ao carregar comentários");
-          } else if (!cancelled) {
-            setComments(res2.data || []);
-          }
-        } else if (!cancelled) {
-          setComments(res.data || []);
-        }
+        await loadComments();
       } catch (err: any) {
         console.error("Unexpected error loading comments:", err);
         toast.error(err?.message || "Erro ao carregar comentários");
@@ -55,6 +73,7 @@ export function CommentsModal({ open, onClose, post }: any) {
         if (!cancelled) setLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
       document.body.style.overflow = "";
@@ -67,7 +86,8 @@ export function CommentsModal({ open, onClose, post }: any) {
       toast.error("Inicia sessão para comentar");
       return;
     }
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !postId) return;
+
     try {
       const { error } = await supabase.from("post_comments").insert({
         post_id: postId,
@@ -76,30 +96,9 @@ export function CommentsModal({ open, onClose, post }: any) {
         comment: newComment.trim(),
       });
       if (error) throw error;
+
       setNewComment("");
-      // reload
-      const { data, error: reloadError } = await supabase
-        .from("post_comments")
-        .select("*, profiles(id, full_name, avatar_url)")
-        .eq("post_id", postId)
-        .order("created_at", { ascending: true });
-      if (reloadError) {
-        console.warn("Reload comments after insert failed:", reloadError);
-        // attempt simple reload
-        const { data: d2, error: err2 } = await supabase
-          .from("post_comments")
-          .select("*")
-          .eq("post_id", postId)
-          .order("created_at", { ascending: true });
-        if (err2) {
-          console.error("Fallback reload also failed:", err2);
-          toast.error(err2.message || "Erro ao carregar comentários");
-        } else {
-          setComments(d2 || []);
-        }
-      } else {
-        setComments(data || []);
-      }
+      await loadComments();
     } catch (err) {
       console.error(err);
       toast.error((err as any)?.message || "Erro ao enviar comentário");
