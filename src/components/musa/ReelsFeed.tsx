@@ -356,7 +356,7 @@ export function ReelsFeed() {
                     </button>
                     <button
                       onClick={() => setDetailModalItem(item)}
-                      className="rounded-full border border-white/10 bg-white/8 px-4 py-2.5 text-sm font-bold text-white/90 transition hover:border-white/20 hover:bg-white/12 active:scale-95"
+                      className="rounded-full border border-white/20 bg-white/6 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:border-white/30 hover:bg-white/10 active:scale-95"
                     >
                       Ver mais
                     </button>
