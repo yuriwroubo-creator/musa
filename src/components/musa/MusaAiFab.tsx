@@ -270,7 +270,7 @@ export function MusaAiFab() {
 
         <div className="border-t border-white/10 p-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="rounded-[28px] border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-            <textarea
+              <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={(event) => {
@@ -281,7 +281,7 @@ export function MusaAiFab() {
               }}
               rows={3}
               placeholder="Pergunta algo sobre a MUSA, negócios ou melhoria de vendas..."
-              className="w-full resize-none bg-transparent text-[14px] text-white outline-none placeholder:text-white/35 font-light leading-relaxed"
+              className="w-full resize-none bg-transparent text-[14px] text-slate-900 dark:text-white outline-none placeholder:text-slate-500 dark:placeholder:text-white/35 font-light leading-relaxed"
             />
             <div className="mt-4 flex items-center justify-end gap-3">
               <button

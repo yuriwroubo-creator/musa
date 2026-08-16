@@ -373,13 +373,69 @@ export const publishItemFn = createServerFn({ method: "POST" })
 
     if (insertError) {
       console.error(`[PUBLISH] Erro ao inserir na tabela ${table}:`, insertError);
+
+      // Se for erro de foreign key no vendor_id, tentamos recuperar de forma agressiva:
+      // 1) criar uma loja fallback mínima para garantir que o vendor_id existe
+      // 2) tentar inserir novamente
       if (isVendorForeignKeyError(insertError)) {
-        return {
-          success: false,
-          error:
-            "A Base de Dados ainda está a ligar publicações ao perfil antigo em vez da loja. Corre a migração 00010 no Supabase e tenta publicar novamente.",
-        };
+        console.warn('[PUBLISH] Detetado FK error vendor_id — a tentar criar loja fallback e re-tentar insert');
+
+        try {
+          const fallbackPayload = {
+            serial_id: generateSerialId(),
+            user_id: authenticatedUserId,
+            vendor_id: authenticatedUserId,
+            store_name: data.shopName || data.ownerName || 'Loja',
+            plan: 'basic',
+            status: 'active',
+          };
+
+          const { data: createdVendor, error: createVendorError } = await supabase
+            .from('vendor_subscriptions')
+            .insert(fallbackPayload)
+            .select('id')
+            .maybeSingle();
+
+          if (createVendorError) {
+            console.error('[PUBLISH] Falha ao criar vendor fallback:', createVendorError);
+            return {
+              success: false,
+              error:
+                'Falha ao criar a loja automática necessária para publicar. Contacta o suporte ou verifica a base de dados.',
+            };
+          }
+
+          if (!createdVendor?.id) {
+            return {
+              success: false,
+              error: 'Não foi possível criar a loja necessária para publicar. Tenta novamente mais tarde.',
+            };
+          }
+
+          // Atualiza vendorId e tenta inserir novamente
+          vendorId = createdVendor.id;
+          payload.vendor_id = vendorId;
+
+          const { error: retryError } = await supabase.from(table).insert(payload);
+          if (retryError) {
+            console.error('[PUBLISH] Retentativa de insert falhou:', retryError);
+            return {
+              success: false,
+              error: `Falha ao guardar na Base de Dados (${table}) depois de criar loja fallback: ${retryError.message}`,
+            };
+          }
+
+          console.log('[PUBLISH] Retentativa de insert bem sucedida após criar loja fallback.');
+          return { success: true };
+        } catch (e) {
+          console.error('[PUBLISH] Exceção ao tratar FK error:', e);
+          return {
+            success: false,
+            error: 'Erro inesperado ao tentar corrigir a loja associada. Contacta o suporte.',
+          };
+        }
       }
+
       return {
         success: false,
         error: `Falha ao guardar na Base de Dados (${table}): ${insertError.message}`,
