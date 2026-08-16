@@ -15,19 +15,45 @@ export function CommentsModal({ open, onClose, post }: any) {
 
   useEffect(() => {
     if (!open || !postId) return;
+    let cancelled = false;
     setLoading(true);
-    supabase
-      .from("post_comments")
-      .select("*, profiles(*)")
-      .eq("post_id", postId)
-      .order("created_at", { ascending: true })
-      .then((res) => {
+    (async () => {
+      try {
+        // First try to fetch with joined profiles
+        const res = await supabase
+          .from("post_comments")
+          .select("*, profiles(id, full_name, avatar_url)")
+          .eq("post_id", postId)
+          .order("created_at", { ascending: true });
+
         if (res.error) {
-          console.error(res.error);
-          toast.error("Erro ao carregar comentários");
-        } else setComments(res.data || []);
-      })
-      .finally(() => setLoading(false));
+          console.warn("Comments select with profiles failed:", res.error);
+          // fallback to simple select (no join) in case RLS or relation issues exist
+          const res2 = await supabase
+            .from("post_comments")
+            .select("*")
+            .eq("post_id", postId)
+            .order("created_at", { ascending: true });
+
+          if (res2.error) {
+            console.error("Fallback comments select also failed:", res2.error);
+            toast.error(res2.error.message || "Erro ao carregar comentários");
+          } else if (!cancelled) {
+            setComments(res2.data || []);
+          }
+        } else if (!cancelled) {
+          setComments(res.data || []);
+        }
+      } catch (err: any) {
+        console.error("Unexpected error loading comments:", err);
+        toast.error(err?.message || "Erro ao carregar comentários");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [open, postId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,15 +73,31 @@ export function CommentsModal({ open, onClose, post }: any) {
       if (error) throw error;
       setNewComment("");
       // reload
-      const { data } = await supabase
+      const { data, error: reloadError } = await supabase
         .from("post_comments")
-        .select("*, profiles(*)")
+        .select("*, profiles(id, full_name, avatar_url)")
         .eq("post_id", postId)
         .order("created_at", { ascending: true });
-      setComments(data || []);
+      if (reloadError) {
+        console.warn("Reload comments after insert failed:", reloadError);
+        // attempt simple reload
+        const { data: d2, error: err2 } = await supabase
+          .from("post_comments")
+          .select("*")
+          .eq("post_id", postId)
+          .order("created_at", { ascending: true });
+        if (err2) {
+          console.error("Fallback reload also failed:", err2);
+          toast.error(err2.message || "Erro ao carregar comentários");
+        } else {
+          setComments(d2 || []);
+        }
+      } else {
+        setComments(data || []);
+      }
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao enviar comentário");
+      toast.error((err as any)?.message || "Erro ao enviar comentário");
     }
   };
 
