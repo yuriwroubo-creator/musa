@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Send, X } from "lucide-react";
+import { Loader2, Send, X, Maximize, Minimize } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { musaAssistantFn } from "@/lib/musa-ai.functions";
@@ -14,59 +14,59 @@ import remarkGfm from "remark-gfm";
 // Custom markdown components for rich styling
 const MarkdownComponents = {
   h1: ({ children }: { children: React.ReactNode }) => (
-    <h1 className="text-lg font-bold mb-3 text-white">{children}</h1>
+    <h1 className="text-lg font-bold mb-3 text-slate-900 dark:text-white">{children}</h1>
   ),
   h2: ({ children }: { children: React.ReactNode }) => (
-    <h2 className="text-base font-bold mb-2 text-white/90">{children}</h2>
+    <h2 className="text-base font-bold mb-2 text-slate-800 dark:text-white/90">{children}</h2>
   ),
   h3: ({ children }: { children: React.ReactNode }) => (
-    <h3 className="text-sm font-bold mb-2 text-white/80">{children}</h3>
+    <h3 className="text-sm font-bold mb-2 text-slate-700 dark:text-white/80">{children}</h3>
   ),
   p: ({ children }: { children: React.ReactNode }) => (
-    <p className="mb-3 leading-relaxed">{children}</p>
+    <p className="mb-3 leading-relaxed text-slate-700 dark:text-white/90">{children}</p>
   ),
   ul: ({ children }: { children: React.ReactNode }) => (
-    <ul className="mb-3 ml-4 list-disc space-y-1 text-white/90">{children}</ul>
+    <ul className="mb-3 ml-4 list-disc space-y-1 text-slate-700 dark:text-white/90">{children}</ul>
   ),
   ol: ({ children }: { children: React.ReactNode }) => (
-    <ol className="mb-3 ml-4 list-decimal space-y-1 text-white/90">{children}</ol>
+    <ol className="mb-3 ml-4 list-decimal space-y-1 text-slate-700 dark:text-white/90">{children}</ol>
   ),
   li: ({ children }: { children: React.ReactNode }) => (
     <li className="text-sm">{children}</li>
   ),
   strong: ({ children }: { children: React.ReactNode }) => (
-    <strong className="font-semibold text-white">{children}</strong>
+    <strong className="font-semibold text-slate-900 dark:text-white">{children}</strong>
   ),
   em: ({ children }: { children: React.ReactNode }) => (
-    <em className="italic text-white/90">{children}</em>
+    <em className="italic text-slate-700 dark:text-white/90">{children}</em>
   ),
   code: ({ children }: { children: React.ReactNode }) => (
-    <code className="bg-white/10 px-1.5 py-0.5 rounded text-xs font-mono text-white/90">{children}</code>
+    <code className="bg-white/10 px-1.5 py-0.5 rounded text-xs font-mono text-slate-800 dark:text-white/90">{children}</code>
   ),
   blockquote: ({ children }: { children: React.ReactNode }) => (
-    <blockquote className="border-l-2 border-white/20 pl-3 italic text-white/70 my-3">{children}</blockquote>
+    <blockquote className="border-l-2 border-slate-200 dark:border-white/10 pl-3 italic text-slate-600 dark:text-white/80 my-3">{children}</blockquote>
   ),
   table: ({ children }: { children: React.ReactNode }) => (
     <div className="overflow-x-auto my-3">
-      <table className="min-w-full border border-white/10 rounded-lg overflow-hidden">
+      <table className="min-w-full border border-slate-100 dark:border-white/10 rounded-lg overflow-hidden">
         {children}
       </table>
     </div>
   ),
   thead: ({ children }: { children: React.ReactNode }) => (
-    <thead className="bg-white/10">{children}</thead>
+    <thead className="bg-slate-50 dark:bg-white/6">{children}</thead>
   ),
   tbody: ({ children }: { children: React.ReactNode }) => (
-    <tbody className="divide-y divide-white/10">{children}</tbody>
+    <tbody className="divide-y divide-slate-100 dark:divide-white/10">{children}</tbody>
   ),
   tr: ({ children }: { children: React.ReactNode }) => (
-    <tr className="hover:bg-white/5 transition-colors">{children}</tr>
+    <tr className="odd:bg-white/50 even:bg-transparent hover:bg-white/25 dark:odd:bg-slate-800 transition-colors">{children}</tr>
   ),
   th: ({ children }: { children: React.ReactNode }) => (
-    <th className="px-3 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">{children}</th>
+    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 dark:text-white uppercase tracking-wider">{children}</th>
   ),
   td: ({ children }: { children: React.ReactNode }) => (
-    <td className="px-3 py-2 text-sm text-white/90">{children}</td>
+    <td className="px-3 py-2 text-sm text-slate-700 dark:text-white/90">{children}</td>
   ),
   a: ({ children, href }: { children: React.ReactNode; href?: string }) => (
     <a 
@@ -88,12 +88,13 @@ type ChatMessage = {
 export function MusaAiFab() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
       content:
-        "Olá! Sou a Musa AI, tua assistente premium da MUSA. Posso ajudar-te a descobrir produtos, serviços e criadoras, além de dar conselhos de negócio para melhorar as tuas vendas.",
+        "Olá! Sou a assistente Musa AI. Ajudo-te a otimizar vendas, descobrir criadoras e gerir publicações na plataforma.",
     },
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -103,6 +104,26 @@ export function MusaAiFab() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
+
+  // Lock background scroll when Drawer / Fullscreen is open
+  useEffect(() => {
+    const locked = open || isFullscreen;
+    if (typeof document !== "undefined") {
+      document.body.style.overflow = locked ? "hidden" : "";
+    }
+    return () => {
+      if (typeof document !== "undefined") document.body.style.overflow = "";
+    };
+  }, [open, isFullscreen]);
+
+  // compute dynamic classes for backdrop and drawer based on fullscreen
+  const backdropClass = isFullscreen
+    ? "fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm"
+    : "fixed inset-0 z-[110] bg-black/35 backdrop-blur-sm";
+
+  const drawerBaseClass = isFullscreen
+    ? "fixed inset-0 w-full h-[100dvh] z-[9999] rounded-none"
+    : "fixed right-0 top-0 z-[1000] w-[85vw] max-w-sm h-[100dvh] flex flex-col";
 
   const mutation = useMutation({
     mutationFn: async (message: string) => {
@@ -150,9 +171,12 @@ export function MusaAiFab() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[110] bg-black/35 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
+            transition={{ duration: 0.25 }}
+            className={backdropClass}
+            onClick={() => {
+              setIsFullscreen(false);
+              setOpen(false);
+            }}
             aria-hidden="true"
           />
         )}
@@ -161,52 +185,61 @@ export function MusaAiFab() {
       <AnimatePresence>
         {open && (
           <motion.aside
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, x: 300 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 300 }}
             transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
-            className="fixed right-4 top-1/2 -translate-y-1/2 z-[115] flex w-[90vw] max-w-[380px] h-[60vh] max-h-[500px] flex-col rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(12,12,16,.99),rgba(18,16,24,.98))] text-white shadow-2xl"
+            className={`${drawerBaseClass} ${!isFullscreen ? 'rounded-l-3xl' : 'rounded-none'} bg-white/90 dark:bg-slate-900/80 text-slate-900 dark:text-white backdrop-blur-md shadow-2xl`}
             aria-label="Musa AI"
+            onClick={(e) => e.stopPropagation()}
           >
-        <div className="border-b border-white/10 px-5 py-5">
-          <div className="flex items-start justify-between gap-4">
+        <div className="px-4 py-4 border-b">
+            <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-[#FF2D78] to-[#FF5BA3] shadow-[0_8px_24px_rgba(255,45,120,.3)]">
                 <MusaAiLogo className="size-7" />
               </div>
               <div>
-                <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/65">
-                  Luanda, Angola
-                </p>
-                <h2 className="mt-2 text-2xl font-black tracking-tight">Musa AI</h2>
-                <p className="mt-1 text-sm leading-relaxed text-white/70 font-light">
-                  Sua assistente premium para negócios e descobertas na MUSA.
-                </p>
+                <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Musa AI</h2>
+                <p className="mt-1 text-sm leading-tight text-slate-600 dark:text-white/80 font-light">Ajudo-te a otimizar vendas, descobrir criadoras e gerir publicações.</p>
               </div>
             </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="flex size-10 items-center justify-center rounded-full bg-white/8 text-white/75 transition hover:bg-white/14"
-              aria-label="Fechar Musa AI"
-            >
-              <X className="size-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsFullscreen((c) => !c)}
+                className="flex size-10 items-center justify-center rounded-full bg-white/6 text-white/75 transition hover:bg-white/12"
+                aria-label={isFullscreen ? "Minimizar" : "Tela cheia"}
+                title={isFullscreen ? "Minimizar" : "Tela cheia"}
+              >
+                {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
+              </button>
+              <button
+                onClick={() => {
+                  setIsFullscreen(false);
+                  setOpen(false);
+                }}
+                className="flex size-10 items-center justify-center rounded-full bg-white/8 text-white/75 transition hover:bg-white/14"
+                aria-label="Fechar Musa AI"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5">
+        <div className="flex-1 overflow-y-auto px-5 py-5 pb-4">
           <div className="space-y-4">
             {messages.map((message, index) => (
               <motion.div
                 key={`${message.role}-${index}`}
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
                 className={cn(
                   "max-w-[90%] rounded-[28px] px-5 py-4 text-[14px] leading-relaxed shadow-sm font-light",
                   message.role === "user"
                     ? "ml-auto bg-gradient-to-br from-[#FF2D78] to-[#FF5BA3] text-white"
-                    : "bg-white/10 text-white/95 backdrop-blur-sm border border-white/5",
+                    : "bg-white/80 text-slate-900 dark:bg-slate-800/70 dark:text-white border border-slate-100 dark:border-white/10",
                 )}
               >
                 {message.role === "assistant" ? (
@@ -235,7 +268,7 @@ export function MusaAiFab() {
           </div>
         </div>
 
-        <div className="border-t border-white/10 p-5">
+        <div className="border-t border-white/10 p-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="rounded-[28px] border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
             <textarea
               value={input}
@@ -250,10 +283,7 @@ export function MusaAiFab() {
               placeholder="Pergunta algo sobre a MUSA, negócios ou melhoria de vendas..."
               className="w-full resize-none bg-transparent text-[14px] text-white outline-none placeholder:text-white/35 font-light leading-relaxed"
             />
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <span className="text-[10px] font-light text-white/40">
-                Assistente de negócios e descobertas
-              </span>
+            <div className="mt-4 flex items-center justify-end gap-3">
               <button
                 onClick={sendMessage}
                 disabled={mutation.isPending || !input.trim()}

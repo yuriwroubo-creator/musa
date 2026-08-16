@@ -13,10 +13,10 @@ type Props = {
   onQueryChange: (v: string) => void;
   cartCount: number;
   onCartClick: () => void;
-  onSellClick: () => void;
+  onPublishClick: () => void;
 };
 
-export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSellClick }: Props) {
+export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPublishClick }: Props) {
   const [dark, setDark] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, signInWithGoogle } = useAuth();
@@ -27,8 +27,8 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
   }, [dark]);
 
   // Get user initials for avatar
-  const initials = user?.user_metadata?.full_name
-    ? user.user_metadata.full_name
+  const initials = user?.user_metadata?.['full_name']
+    ? user.user_metadata['full_name']
         .split(" ")
         .map((n: string) => n[0])
         .slice(0, 2)
@@ -36,7 +36,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
         .toUpperCase()
     : (user?.email?.[0]?.toUpperCase() ?? "?");
 
-  const avatarUrl = user?.user_metadata?.avatar_url;
+  const avatarUrl = user?.user_metadata?.['avatar_url'];
 
   return (
     <header className="sticky top-0 z-40 border-b border-border-soft/70 bg-background/76 backdrop-blur-2xl">
@@ -66,7 +66,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-soft"
-              placeholder="Buscar produtos ou serviços em Luanda..."
+              placeholder="Buscar produtos ou serviços em Angola..."
               aria-label="Buscar"
             />
           </div>
@@ -76,11 +76,11 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
             {/* Location pill — desktop */}
             <div className="mr-1 hidden items-center gap-1 rounded-full border border-border-soft bg-card/70 px-2.5 py-1.5 shadow-sm lg:flex">
               <MapPin className="size-3 text-primary" />
-              <span className="text-[10px] font-medium text-muted-foreground">Luanda</span>
+              <span className="text-[10px] font-medium text-muted-foreground">Angola</span>
             </div>
 
             <button
-              onClick={onSellClick}
+              onClick={onPublishClick}
               id="btn-sell-header"
               className="sheen mr-1 hidden rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-white shadow-neon transition-all hover:shadow-neon-lg active:scale-95 lg:block"
             >
@@ -168,7 +168,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             className="w-full bg-transparent text-[13.5px] outline-none placeholder:text-muted-soft"
-            placeholder="Buscar em Luanda..."
+            placeholder="Buscar em Angola..."
             aria-label="Buscar"
           />
         </div>
@@ -178,7 +178,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onSel
           <div className="glass-panel mt-2 rounded-[24px] p-4 lg:hidden">
             <button
               onClick={() => {
-                onSellClick();
+                onPublishClick();
                 setMenuOpen(false);
               }}
               className="sheen w-full rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-neon"

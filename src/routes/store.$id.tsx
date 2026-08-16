@@ -1,12 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
-import { MessageCircle, MapPin, ShoppingBag, Heart, User } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import {
+  MessageCircle,
+  MapPin,
+  ShoppingBag,
+  Heart,
+  User,
+  Grid3X3,
+  Bell,
+} from "lucide-react";
+import { ChatButton } from "@/components/musa/ChatButton";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useFollows } from "@/hooks/useFollows";
-import { ProductCard } from "@/components/musa/Cards";
 import { DetailModal } from "@/components/musa/DetailModal";
 import { BuyModal } from "@/components/musa/BuyModal";
 
@@ -14,8 +22,71 @@ export const Route = createFileRoute("/store/$id")({
   component: StorePage,
 });
 
+type StoreTab = "publicacoes" | "interacoes";
+
+function StoreTabButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition",
+        active
+          ? "bg-primary text-primary-foreground shadow-neon"
+          : "bg-secondary text-muted-foreground hover:bg-secondary/80",
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function StoreInteractionsTab() {
+  return (
+    <div className="py-6">
+      <div className="rounded-2xl border border-border-soft bg-card p-6 text-center">
+        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-accent">
+          <Bell className="size-7 text-accent-foreground" />
+        </div>
+        <h3 className="text-base font-bold text-foreground">Mensagens & Interações</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Em breve vais ver aqui as curtidas e comentários recebidos nos teus Reels.
+        </p>
+        <div className="mt-6 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-xl border border-border-soft bg-background p-3"
+            >
+              <div className="size-10 animate-pulse rounded-full bg-muted" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
+                <div className="h-2 w-1/2 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-[11px] font-medium text-muted-foreground/70">
+          Publica no Reels para começares a receber interações.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function StorePage() {
   const { id } = Route.useParams();
+  const [tab, setTab] = useState<StoreTab>("publicacoes");
   const [detailModalItem, setDetailModalItem] = useState<any | null>(null);
   const [buyModalItem, setBuyModalItem] = useState<any | null>(null);
   const { user, signInWithGoogle } = useAuth();
@@ -45,6 +116,7 @@ function StorePage() {
         .from("products")
         .select("*")
         .eq("vendor_id", id)
+        .or("is_reel.is.null,is_reel.eq.false")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -61,6 +133,7 @@ function StorePage() {
         .from("services")
         .select("*")
         .eq("vendor_id", id)
+        .or("is_reel.is.null,is_reel.eq.false")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -165,19 +238,17 @@ function StorePage() {
 
           {/* Action buttons */}
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              onClick={handleMessage}
-              disabled={!storeProfile?.whatsapp && !storeProfile?.phone}
-              className={cn(
-                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition",
-                (!storeProfile?.whatsapp && !storeProfile?.phone)
-                  ? "bg-muted text-muted-foreground cursor-not-allowed"
-                  : "bg-secondary text-foreground hover:bg-secondary/80"
-              )}
-            >
-              <MessageCircle className="size-4" />
-              Mensagem
-            </button>
+            {storeProfile?.id ? (
+              <ChatButton vendorUserId={storeProfile.id} label="Mensagem" />
+            ) : (
+              <button
+                disabled
+                className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold bg-muted text-muted-foreground cursor-not-allowed"
+              >
+                <MessageCircle className="size-4" />
+                Mensagem
+              </button>
+            )}
             <button
               onClick={handleFollow}
               disabled={toggleFollow.isPending}
@@ -232,55 +303,79 @@ function StorePage() {
         </div>
       </div>
 
-      {/* Products Grid */}
+      {/* Tabs */}
       <div className="px-4">
-        <h2 className="text-lg font-bold text-foreground mb-4">Produtos e Serviços</h2>
-        
-        {loadingProducts || loadingServices ? (
-          <div className="grid grid-cols-3 gap-1">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="aspect-square animate-pulse bg-muted" />
-            ))}
-          </div>
-        ) : productsError || servicesError ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-muted-foreground">
-              Não foi possível carregar os produtos. Tenta novamente.
-            </p>
-          </div>
-        ) : allItems.length === 0 ? (
-          <div className="text-center py-8">
-            <ShoppingBag className="mx-auto size-12 text-muted-foreground/50" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Esta loja ainda não tem produtos publicados.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-1">
-            {allItems.map((item: any) => (
-              <div
-                key={item.id}
-                onClick={() => {
-                  setDetailModalItem(item);
-                }}
-                className="relative aspect-square cursor-pointer overflow-hidden bg-muted"
-              >
-                {item.img || item.image_url || item.media_urls?.[0] ? (
-                  <img
-                    src={item.img || item.image_url || item.media_urls?.[0]}
-                    alt={item.name || item.title}
-                    className="size-full object-cover transition hover:scale-105"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
-                    <User className="size-8 text-muted-foreground/50" />
-                  </div>
-                )}
+        <div className="flex gap-2">
+          <StoreTabButton
+            active={tab === "publicacoes"}
+            onClick={() => setTab("publicacoes")}
+            icon={<Grid3X3 className="size-4" />}
+            label="Publicações"
+          />
+          <StoreTabButton
+            active={tab === "interacoes"}
+            onClick={() => setTab("interacoes")}
+            icon={<MessageCircle className="size-4" />}
+            label="Mensagens / Interações"
+          />
+        </div>
+      </div>
+
+      {/* Tab content */}
+      <div className="px-4">
+        {tab === "publicacoes" && (
+          <>
+            <h2 className="mb-4 mt-5 text-lg font-bold text-foreground">Produtos e Serviços</h2>
+
+            {loadingProducts || loadingServices ? (
+              <div className="grid grid-cols-3 gap-1">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="aspect-square animate-pulse bg-muted" />
+                ))}
               </div>
-            ))}
-          </div>
+            ) : productsError || servicesError ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Não foi possível carregar os produtos. Tenta novamente.
+                </p>
+              </div>
+            ) : allItems.length === 0 ? (
+              <div className="py-8 text-center">
+                <ShoppingBag className="mx-auto size-12 text-muted-foreground/50" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Esta loja ainda não tem produtos publicados.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-1">
+                {allItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      setDetailModalItem(item);
+                    }}
+                    className="relative aspect-square cursor-pointer overflow-hidden bg-muted"
+                  >
+                    {item.img || item.image_url || item.media_urls?.[0] ? (
+                      <img
+                        src={item.img || item.image_url || item.media_urls?.[0]}
+                        alt={item.name || item.title}
+                        className="size-full object-cover transition hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
+                        <User className="size-8 text-muted-foreground/50" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
+
+        {tab === "interacoes" && <StoreInteractionsTab />}
       </div>
 
       {/* Detail Modal */}

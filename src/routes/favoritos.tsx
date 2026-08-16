@@ -8,7 +8,7 @@ import { SiteHeader } from "@/components/musa/SiteHeader";
 import { ProductCard, ServiceCard } from "@/components/musa/Cards";
 import { Heart } from "lucide-react";
 import { ItemDrawer, type DrawerItem } from "@/components/musa/ItemDrawer";
-import { SellModal } from "@/components/musa/SellModal";
+import { useSellModal } from "@/lib/SellContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -20,9 +20,9 @@ function FavoritesPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { favorites, isLoading: loadingFavorites } = useFavorites();
+  const { setPublishSheetOpen } = useSellModal();
 
   const [drawerItem, setDrawerItem] = useState<DrawerItem | null>(null);
-  const [sellOpen, setSellOpen] = useState(false);
   const [tab, setTab] = useState<"produtos" | "servicos">("produtos");
 
   useEffect(() => {
@@ -78,7 +78,7 @@ function FavoritesPage() {
         onQueryChange={() => {}}
         cartCount={0}
         onCartClick={() => {}}
-        onSellClick={() => setSellOpen(true)}
+        onPublishClick={() => setPublishSheetOpen(true)}
       />
       <main className="mx-auto w-full max-w-6xl px-5 pt-8 lg:px-8">
         <div className="mb-8 flex items-center gap-3">
@@ -176,7 +176,6 @@ function FavoritesPage() {
       </main>
 
       <ItemDrawer item={drawerItem} onClose={() => setDrawerItem(null)} onConfirm={confirm} />
-      <SellModal open={sellOpen} onClose={() => setSellOpen(false)} />
     </div>
   );
 }
