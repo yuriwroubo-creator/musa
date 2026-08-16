@@ -210,7 +210,10 @@ function Index() {
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase
         .from("products")
-        .select("*, profiles(id, store_name, avatar_url, username)")
+        // also pull vendor_subscriptions and nested profiles so store metadata is available
+        .select(
+          "*, vendor_subscriptions(id, user_id, vendor_id, store_name, business_name, full_name, profiles(id, store_name, avatar_url, username))",
+        )
         .or("is_reel.is.null,is_reel.eq.false")
         .order("created_at", { ascending: false })
         .range(pageParam * 12, (pageParam + 1) * 12 - 1);
@@ -237,7 +240,7 @@ function Index() {
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase
         .from("services")
-        .select("*")
+        .select("*, vendor_subscriptions(id, user_id, vendor_id, store_name, business_name, full_name, profiles(id, store_name, avatar_url, username))")
         .or("is_reel.is.null,is_reel.eq.false")
         .order("created_at", { ascending: false })
         .range(pageParam * 12, (pageParam + 1) * 12 - 1);
@@ -288,24 +291,32 @@ function Index() {
   const baseProducts = useMemo(() => {
     return dbProducts.map((product: any) => ({
       ...product,
-      user_id: product.user_id || product.profiles?.id || null,
+      user_id:
+        product.user_id || product.profiles?.id || product.vendor_subscriptions?.user_id || null,
       store_name:
-      product.profiles?.store_name ||
-      product.profiles?.username ||
-      product.store_name ||
-      product.store ||
-      "Loja sem nome",
-      phone: product.phone || "",
-      whatsapp: product.whatsapp || "",
+        product.vendor_subscriptions?.business_name ||
+        product.vendor_subscriptions?.store_name ||
+        product.profiles?.store_name ||
+        product.profiles?.username ||
+        product.store_name ||
+        product.store ||
+        "Loja sem nome",
+      phone: product.phone || product.vendor_subscriptions?.phone || "",
+      whatsapp: product.whatsapp || product.vendor_subscriptions?.whatsapp || "",
     }));
   }, [dbProducts]);
 
   const baseServices = useMemo(() => {
     return dbServices.map((service: any) => ({
       ...service,
-      store_name: service.store_name || service.store || "Loja",
-      phone: service.phone || "",
-      whatsapp: service.whatsapp || "",
+      store_name:
+        service.vendor_subscriptions?.business_name ||
+        service.vendor_subscriptions?.store_name ||
+        service.store_name ||
+        service.store ||
+        "Loja",
+      phone: service.phone || service.vendor_subscriptions?.phone || "",
+      whatsapp: service.whatsapp || service.vendor_subscriptions?.whatsapp || "",
     }));
   }, [dbServices]);
 

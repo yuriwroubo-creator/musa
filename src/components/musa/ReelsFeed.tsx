@@ -12,13 +12,17 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { BuyModal } from "@/components/musa/BuyModal";
+import { DetailModal } from "@/components/musa/DetailModal";
+import { useNavigate } from "@tanstack/react-router";
 
 function isVideoUrl(url: string) {
   return /\.(mp4|webm|ogg|mov|m4v)$/i.test(url);
 }
 
 function mapReelItem(item: Record<string, unknown>, type: "product" | "service") {
-  const profiles = item.profiles as Record<string, unknown> | null;
+  const profiles = (item.profiles as Record<string, unknown> | null) ||
+    (item.vendor_subscriptions?.profiles as Record<string, unknown> | null) || null;
+  const vendor = item.vendor_subscriptions as Record<string, unknown> | null;
   const mediaUrls = item.media_urls as string[] | undefined;
   const mediaUrl =
     (item.img as string) ||
@@ -32,19 +36,23 @@ function mapReelItem(item: Record<string, unknown>, type: "product" | "service")
     media_url: mediaUrl,
     title: (item.name as string) || (item.title as string) || "",
     price: item.price,
-    store_name: (item.store_name as string) || (item.store as string),
+    store_name:
+      (vendor?.business_name as string) || (vendor?.store_name as string) || (item.store_name as string) ||
+      (item.store as string),
     profile: profiles,
-    username: profiles?.username as string | undefined,
+    username: (profiles?.username as string) || (vendor?.profiles?.username as string) || undefined,
   };
 }
 
 export function ReelsFeed() {
   const [buyModalItem, setBuyModalItem] = useState<Record<string, unknown> | null>(null);
+  const [detailModalItem, setDetailModalItem] = useState<Record<string, unknown> | null>(null);
   const [muted, setMuted] = useState(true);
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const { user, signInWithGoogle } = useAuth();
+  const navigate = useNavigate();
 
   const {
     data: reelsData,
@@ -62,13 +70,14 @@ export function ReelsFeed() {
       const [productsRes, servicesRes] = await Promise.all([
         supabase
           .from("products")
-          .select("*, profiles(*)")
+          // ensure we pull vendor data (vendor_subscriptions) and nested profile where available
+          .select("*, vendor_subscriptions(*, profiles(*))")
           .eq("is_reel", true)
           .order("created_at", { ascending: false })
           .range(pageParam * 5, (pageParam + 1) * 5 - 1),
         supabase
           .from("services")
-          .select("*, profiles(*)")
+          .select("*, vendor_subscriptions(*, profiles(*))")
           .eq("is_reel", true)
           .order("created_at", { ascending: false })
           .range(pageParam * 5, (pageParam + 1) * 5 - 1),
@@ -96,12 +105,14 @@ export function ReelsFeed() {
   const reels = searchQuery.trim()
     ? allReels.filter((item) => {
         const q = searchQuery.toLowerCase();
+        const vendor = item.vendor_subscriptions || null;
         const storeName =
+          (vendor?.business_name as string) ||
+          (vendor?.full_name as string) ||
           (item.profile?.full_name as string) ||
-          (item.profile?.business_name as string) ||
           (item.store_name as string) ||
           "";
-        const username = (item.profile?.username as string) || "";
+        const username = (vendor?.profiles?.username as string) || (item.profile?.username as string) || "";
         const title = (item.title as string) || "";
         return (
           storeName.toLowerCase().includes(q) ||
@@ -253,7 +264,8 @@ export function ReelsFeed() {
         ) : (
           reels.map((item, index) => {
             const itemId = String(item.id);
-            const profile = item.profile as Record<string, unknown> | null;
+            const profile = (item.profile as Record<string, unknown> | null) ||
+              (item.vendor_subscriptions?.profiles as Record<string, unknown> | null) || null;
             const storeLabel =
               (profile?.username as string) ||
               (profile?.full_name as string) ||
@@ -308,7 +320,17 @@ export function ReelsFeed() {
 
                 {/* Bottom overlay */}
                 <div className="absolute bottom-24 left-4 right-20 max-w-md">
-                  <p className="mb-1 text-sm font-bold text-white">@{storeLabel}</p>
+                  <button
+                    onClick={() => {
+                      const profileId =
+                        (profile?.id as string) || (item.vendor_subscriptions?.user_id as string) ||
+                        (item.vendor_subscriptions?.vendor_id as string) || null;
+                      if (profileId) navigate({ to: "/store/$id", params: { id: profileId } });
+                    }}
+                    className="mb-1 text-sm font-bold text-white text-left"
+                  >
+                    @{storeLabel}
+                  </button>
                   <p className="mb-2 line-clamp-3 text-sm text-white/90">
                     {(item.description as string) || (item.title as string)}
                   </p>
@@ -323,12 +345,20 @@ export function ReelsFeed() {
                         : String(item.price)}
                     </p>
                   )}
-                  <button
-                    onClick={() => setBuyModalItem(item)}
-                    className="rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:scale-105 active:scale-95"
-                  >
-                    Comprar
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setBuyModalItem(item)}
+                      className="rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:scale-105 active:scale-95"
+                    >
+                      Comprar
+                    </button>
+                    <button
+                      onClick={() => setDetailModalItem(item)}
+                      className="rounded-full border border-white/10 bg-white/8 px-4 py-2.5 text-sm font-bold text-white/90 transition hover:border-white/20 hover:bg-white/12 active:scale-95"
+                    >
+                      Ver mais
+                    </button>
+                  </div>
                 </div>
 
                 {/* Right side actions */}
@@ -425,6 +455,7 @@ export function ReelsFeed() {
             : { name: "", price: 0, category: "", store: "" }
         }
       />
+      <DetailModal open={!!detailModalItem} onClose={() => setDetailModalItem(null)} item={detailModalItem || {}} />
     </div>
   );
 }

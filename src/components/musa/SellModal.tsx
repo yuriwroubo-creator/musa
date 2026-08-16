@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { publishItemFn } from "@/lib/publish.functions";
 import { checkContent } from "@/lib/moderation/ai-check";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { MediaUploader } from "@/components/musa/MediaUploader";
@@ -151,6 +151,7 @@ export function SellModal({
   isReel?: boolean;
 }) {
   const { user, session, signInWithGoogle } = useAuth();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [shopName, setShopName] = useState("");
@@ -239,6 +240,10 @@ export function SellModal({
     },
     onSuccess: () => {
       setStep(3);
+      // invalidate the main feeds and reels so the new post shows
+      queryClient.invalidateQueries({ queryKey: ["products_with_views"] });
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["reels", "is_reel"] });
       toast.success(isReel ? "Reel publicado! 🎬" : "Publicado com sucesso! 🎉", {
         description: isReel
           ? "O teu reel já está visível no feed imersivo."
