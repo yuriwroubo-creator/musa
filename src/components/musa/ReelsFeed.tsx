@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { BuyModal } from "@/components/musa/BuyModal";
 import { DetailModal } from "@/components/musa/DetailModal";
+import { CommentsModal } from "@/components/musa/CommentsModal";
 import { useNavigate } from "@tanstack/react-router";
 
 function isVideoUrl(url: string) {
