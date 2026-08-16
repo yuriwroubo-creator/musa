@@ -65,7 +65,7 @@ export function CommentsModal({ open, onClose, post }: any) {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-60 flex items-end justify-center bg-black/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[130] flex items-end justify-center bg-black/40 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div

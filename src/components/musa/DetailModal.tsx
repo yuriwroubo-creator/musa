@@ -35,6 +35,7 @@ function formatPrice(value: unknown) {
 export function DetailModal({ open, onClose, item }: DetailModalProps) {
   const images = item.images || item.media_urls || (item.img ? [item.img] : []);
   const whatsappNumber = item.whatsapp || item.vendor_phone || item.phone;
+  const isMobile = typeof window !== "undefined" ? window.innerWidth <= 640 : false;
 
   // Block body scroll when modal is open
   useEffect(() => {
@@ -71,13 +72,16 @@ export function DetailModal({ open, onClose, item }: DetailModalProps) {
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex w-full max-w-2xl max-h-[85dvh] flex-col rounded-2xl border border-white/10 bg-[#1a1a2e] text-white shadow-[0_30px_80px_rgba(0,0,0,.5)] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+              initial={isMobile ? { y: 120, opacity: 0 } : { scale: 0.95, opacity: 0 }}
+              animate={isMobile ? { y: 0, opacity: 1 } : { scale: 1, opacity: 1 }}
+              exit={isMobile ? { y: 120, opacity: 0 } : { scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className={isMobile ?
+                "w-full fixed bottom-0 left-0 z-[121] rounded-t-2xl border border-white/10 bg-[#1a1a2e] text-white shadow-2xl max-h-[85dvh] overflow-hidden" :
+                "flex w-full max-w-2xl max-h-[85dvh] flex-col rounded-2xl border border-white/10 bg-[#1a1a2e] text-white shadow-[0_30px_80px_rgba(0,0,0,.5)] overflow-hidden"
+              }
+              onClick={(e) => e.stopPropagation()}
+            >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 shrink-0">
               <div className="flex items-center gap-3">
