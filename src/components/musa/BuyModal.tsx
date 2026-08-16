@@ -268,7 +268,13 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
   };
 
   const handleWhatsAppCheckout = () => {
-    const whatsappNumber = product.whatsapp || product.vendor_phone || product.phone || "";
+    const whatsappNumber =
+      product.whatsapp ||
+      product.vendor_phone ||
+      product.phone ||
+      product.vendor_subscriptions?.whatsapp ||
+      product.vendor_subscriptions?.phone ||
+      "";
     if (!whatsappNumber) {
       alert("Número de WhatsApp não disponível para esta loja.");
       return;
@@ -299,9 +305,17 @@ export function BuyModal({ open, onClose, product }: BuyModalProps) {
     message += `📲 *Enviado via MUSA Marketplace*`;
 
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/\D/g, "")}?text=${encodedMessage}`;
-    
-    window.open(whatsappUrl, "_blank");
+    const clean = whatsappNumber.replace(/\D/g, "");
+    // Prefer official wa.me; fallback to api.whatsapp.com if needed
+    const whatsappUrl = `https://wa.me/${clean}?text=${encodedMessage}`;
+    const fallback = `https://api.whatsapp.com/send?phone=${clean}&text=${encodedMessage}`;
+
+    // Try opening wa.me and fallback if popup blocked
+    const newWin = window.open(whatsappUrl, "_blank");
+    if (!newWin) {
+      // Popup blocked or failed, try fallback
+      window.open(fallback, "_blank");
+    }
     onClose();
   };
 

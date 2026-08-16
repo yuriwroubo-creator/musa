@@ -235,7 +235,7 @@ export function ProductCard({
           </button>
           <button
             onClick={handleDetailsClick}
-            className="rounded-xl border border-white/20 bg-white/6 py-2.5 text-sm font-bold tracking-wide text-white shadow-sm transition-all hover:border-white/30 hover:bg-white/10 active:scale-95"
+            className="rounded-xl border border-white/10 bg-white py-2.5 text-sm font-bold tracking-wide text-black shadow-sm transition-all hover:bg-white/90 active:scale-95"
             aria-label="Ver mais detalhes"
           >
             Ver mais
@@ -389,7 +389,7 @@ export function ServiceCard({
               </button>
               <button
                 onClick={onDetails}
-                className="rounded-xl border border-white/20 bg-white/6 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:border-white/30 hover:bg-white/10 active:scale-95"
+                className="rounded-xl border border-white/10 bg-white px-4 py-2 text-sm font-bold text-black shadow-sm transition-all hover:bg-white/90 active:scale-95"
                 aria-label="Ver mais detalhes"
               >
                 Ver mais

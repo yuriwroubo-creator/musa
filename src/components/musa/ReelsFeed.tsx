@@ -347,16 +347,16 @@ export function ReelsFeed() {
                         : String(item.price)}
                     </p>
                   )}
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 items-center">
                     <button
                       onClick={() => setBuyModalItem(item)}
-                      className="rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:scale-105 active:scale-95"
+                      className="flex-1 rounded-lg bg-gradient-to-r from-[#FF2D78] to-[#FF5BA3] px-3 py-2 text-sm font-bold text-white shadow transition hover:scale-105 active:scale-95"
                     >
                       Comprar
                     </button>
                     <button
                       onClick={() => setDetailModalItem(item)}
-                      className="rounded-full border border-white/20 bg-white/6 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:border-white/30 hover:bg-white/10 active:scale-95"
+                      className="rounded-lg border border-white/10 bg-white px-3 py-2 text-sm font-bold text-black shadow-sm transition hover:bg-white/90 active:scale-95"
                     >
                       Ver mais
                     </button>

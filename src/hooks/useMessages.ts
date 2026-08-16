@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 export function useMessages(conversationId: string) {
   const { user } = useAuth();
@@ -16,7 +17,11 @@ export function useMessages(conversationId: string) {
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao carregar mensagens:", error);
+        toast.error("Erro ao carregar mensagens.");
+        throw error;
+      }
       return data || [];
     },
     enabled: !!conversationId,
@@ -59,17 +64,28 @@ export function useMessages(conversationId: string) {
       if (!user) throw new Error("Not authenticated");
 
       // Insert message
-      const { data: message, error } = await supabase
-        .from("messages")
-        .insert({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          content,
-        })
-        .select()
-        .single();
+      try {
+        const { data: message, error } = await supabase
+          .from("messages")
+          .insert({
+            conversation_id: conversationId,
+            sender_id: user.id,
+            content,
+          })
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) {
+          console.error("Erro inserindo mensagem:", error);
+          toast.error("Erro ao enviar mensagem.");
+          throw error;
+        }
+        return message;
+      } catch (err) {
+        console.error("sendMessage failed:", err);
+        toast.error("Erro ao enviar mensagem. Confere permissão e tenta novamente.");
+        throw err;
+      }
 
       // Find receiver
       const { data: conv, error: convError } = await supabase
