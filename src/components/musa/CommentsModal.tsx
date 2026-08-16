@@ -14,6 +14,10 @@ export function CommentsModal({ open, onClose, post }: any) {
   const postType = post?.type || "product";
 
   useEffect(() => {
+    // Prevent body scroll when modal is open
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+
     if (!open || !postId) return;
     let cancelled = false;
     setLoading(true);
@@ -53,6 +57,7 @@ export function CommentsModal({ open, onClose, post }: any) {
     })();
     return () => {
       cancelled = true;
+      document.body.style.overflow = "";
     };
   }, [open, postId]);
 
@@ -107,55 +112,58 @@ export function CommentsModal({ open, onClose, post }: any) {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[130] flex items-end justify-center bg-black/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[130] flex items-end justify-center bg-black/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-2xl bg-card p-4"
+        className="w-full max-w-xl sm:rounded-t-2xl rounded-t-2xl bg-card p-0"
+        style={{ margin: 0 }}
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">Comentários</h3>
-          <button onClick={onClose} className="p-2 rounded-full">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="mt-3 max-h-64 overflow-y-auto space-y-3">
-          {loading ? (
-            <div className="flex justify-center py-6">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          ) : comments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Seja o primeiro a comentar.</p>
-          ) : (
-            comments.map((c) => (
-              <div key={c.id} className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-bold text-primary">
-                  {c.profiles?.full_name?.[0] || "U"}
-                </div>
-                <div>
-                  <p className="text-sm font-medium">{c.profiles?.full_name || "Utilizador"}</p>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.comment}</p>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="mt-4">
-          <div className="flex gap-2">
-            <input
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Escreve um comentário..."
-              className="flex-1 rounded-xl border border-border-soft bg-background px-3 py-2 text-sm outline-none"
-            />
-            <button type="submit" className="rounded-xl bg-primary px-4 py-2 text-white">
-              Enviar
+        <div className="flex flex-col max-h-[80dvh] overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/6">
+            <h3 className="text-lg font-bold">Comentários</h3>
+            <button onClick={onClose} className="p-2 rounded-full">
+              <X className="w-5 h-5" />
             </button>
           </div>
-        </form>
+
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            {loading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : comments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Seja o primeiro a comentar.</p>
+            ) : (
+              comments.map((c) => (
+                <div key={c.id} className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-bold text-primary overflow-hidden">
+                    {c.profiles?.full_name?.[0] || (c.full_name ? c.full_name[0] : "U")}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{c.profiles?.full_name || c.full_name || "Utilizador"}</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.comment}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <form onSubmit={handleSubmit} className="sticky bottom-0 z-40 border-t bg-card px-4 py-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div className="flex gap-2">
+              <input
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Escreve um comentário..."
+                className="flex-1 rounded-full border border-border-soft bg-background px-4 py-2 text-sm outline-none"
+              />
+              <button type="submit" className="rounded-full bg-primary px-4 py-2 text-white">
+                Enviar
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
