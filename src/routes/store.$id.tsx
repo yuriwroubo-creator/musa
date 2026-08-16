@@ -112,10 +112,23 @@ function StorePage() {
   const { data: products, isLoading: loadingProducts, error: productsError } = useQuery({
     queryKey: ["store-products", id],
     queryFn: async () => {
+      // Resolve vendor_subscriptions id for this profile (user)
+      const { data: vendorData, error: vendorError } = await supabase
+        .from("vendor_subscriptions")
+        .select("id")
+        .or(`user_id.eq.${id},vendor_id.eq.${id}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (vendorError) throw vendorError;
+      const vendorId = vendorData?.id;
+
+      if (!vendorId) return [];
+
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("vendor_id", id)
+        .eq("vendor_id", vendorId)
         .or("is_reel.is.null,is_reel.eq.false")
         .order("created_at", { ascending: false });
 
@@ -129,10 +142,23 @@ function StorePage() {
   const { data: services, isLoading: loadingServices, error: servicesError } = useQuery({
     queryKey: ["store-services", id],
     queryFn: async () => {
+      // Resolve vendor_subscriptions id for this profile (user)
+      const { data: vendorData, error: vendorError } = await supabase
+        .from("vendor_subscriptions")
+        .select("id")
+        .or(`user_id.eq.${id},vendor_id.eq.${id}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (vendorError) throw vendorError;
+      const vendorId = vendorData?.id;
+
+      if (!vendorId) return [];
+
       const { data, error } = await supabase
         .from("services")
         .select("*")
-        .eq("vendor_id", id)
+        .eq("vendor_id", vendorId)
         .or("is_reel.is.null,is_reel.eq.false")
         .order("created_at", { ascending: false });
 

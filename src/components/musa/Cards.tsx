@@ -61,8 +61,11 @@ export function ProductCard({
   const displayTitle = product.name || product.title || "Produto sem título";
   const displayPrice = formatPrice(product.price);
   const displayImage = imageUrl || product.image_url || "";
-  const storeUserId = product.user_id || product.profiles?.id || null;
+  const storeUserId =
+    product.user_id || product.profiles?.id || product.vendor_subscriptions?.user_id || null;
   const storeName =
+    product.vendor_subscriptions?.business_name ||
+    product.vendor_subscriptions?.store_name ||
     product.profiles?.store_name ||
     product.profiles?.username ||
     "Loja sem nome";
@@ -116,7 +119,8 @@ export function ProductCard({
     onDetails();
   };
 
-  const profile = product.profiles || storeProfile;
+  // prefer vendor_subscriptions.profiles if available, then product.profiles, then fetched storeProfile
+  const profile = product.vendor_subscriptions?.profiles || product.profiles || storeProfile;
   const storeAvatar =
     profile?.avatar_url || profile?.username?.[0] || profile?.store_name?.[0] || storeName[0];
 
