@@ -33,6 +33,7 @@ function ChatPage() {
   const { messages, isLoading, sendMessage } = useMessages(conversationId);
   const { data: conversations } = useConversations();
   const [content, setContent] = useState("");
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -54,7 +55,8 @@ function ChatPage() {
     const handleFocus = () => {
       setTimeout(() => {
         formElement.scrollIntoView({ behavior: "smooth", block: "end" });
-      }, 300);
+        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      }, 180);
     };
 
     const textarea = formElement.querySelector("textarea");
@@ -62,6 +64,30 @@ function ChatPage() {
       textarea.addEventListener("focus", handleFocus);
       return () => textarea.removeEventListener("focus", handleFocus);
     }
+  }, []);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const updateKeyboardOffset = () => {
+      const keyboardHeight = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop
+      );
+      setKeyboardOffset(keyboardHeight > 120 ? keyboardHeight : 0);
+    };
+
+    updateKeyboardOffset();
+    viewport.addEventListener("resize", updateKeyboardOffset);
+    viewport.addEventListener("scroll", updateKeyboardOffset);
+    window.addEventListener("resize", updateKeyboardOffset);
+
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardOffset);
+      viewport.removeEventListener("scroll", updateKeyboardOffset);
+      window.removeEventListener("resize", updateKeyboardOffset);
+    };
   }, []);
 
   const conversation = useMemo(() => {
@@ -166,7 +192,10 @@ function ChatPage() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 overflow-y-auto px-4 py-4 pb-6 lg:px-6">
+      <main
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-4 pb-[120px] lg:px-6"
+        style={{ paddingBottom: `calc(110px + ${Math.max(keyboardOffset, 0)}px)` }}
+      >
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
           {messages.length === 0 ? (
             <div className="rounded-[28px] border border-white/10 bg-white/5 p-6 text-center text-white/70 shadow-2xl backdrop-blur-sm">
@@ -219,7 +248,11 @@ function ChatPage() {
       <form
         ref={formRef}
         onSubmit={handleSend}
-        className="shrink-0 border-t border-white/10 bg-[#0f0f10]/96 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:px-6 relative z-50"
+        className="fixed inset-x-0 z-50 border-t border-white/10 bg-[#0f0f10]/96 px-4 pt-3 backdrop-blur-xl lg:px-6"
+        style={{
+          bottom: `calc(${Math.max(keyboardOffset, 0) + 76}px + env(safe-area-inset-bottom))`,
+          paddingBottom: `calc(env(safe-area-inset-bottom) + 0.75rem)`,
+        }}
       >
         <div className="mx-auto flex w-full max-w-4xl items-end gap-2 rounded-[28px] border border-white/10 bg-white/5 p-3 shadow-[0_14px_30px_rgba(0,0,0,.22)]">
           <textarea
