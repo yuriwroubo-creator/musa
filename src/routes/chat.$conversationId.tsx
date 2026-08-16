@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useConversations } from "@/hooks/useConversations";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/chat/$conversationId")({
   component: ChatPage,
@@ -44,11 +45,16 @@ function ChatPage() {
     otherUserName = otherUser?.full_name || otherUser?.name || otherUser?.raw_user_meta_data?.name || "Utilizador MUSA";
   }
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    sendMessage.mutate(content);
-    setContent("");
+    try {
+      await sendMessage.mutateAsync(content.trim());
+      setContent("");
+    } catch (err: any) {
+      console.error("sendMessage error", err);
+      toast.error("Erro ao enviar mensagem. Tenta novamente.");
+    }
   };
 
   return (
@@ -88,21 +94,23 @@ function ChatPage() {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSend} className="p-4 border-t flex gap-2 shrink-0 bg-white">
-        <input
-          type="text"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Escreva uma mensagem..."
-          className="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-black"
-        />
-        <button
-          type="submit"
-          disabled={!content.trim() || sendMessage.isPending}
-          className="bg-black text-white px-6 py-2 rounded-full font-medium hover:bg-gray-800 disabled:opacity-50"
-        >
-          Enviar
-        </button>
+      <form onSubmit={handleSend} className="p-3 border-t shrink-0 bg-white">
+        <div className="flex items-end gap-2">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Escreve uma mensagem..."
+            rows={1}
+            className="flex-1 resize-none px-4 py-2 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-black max-h-40"
+          />
+          <button
+            type="submit"
+            disabled={!content.trim() || sendMessage.isPending}
+            className="bg-black text-white px-4 py-2 rounded-full font-medium hover:bg-gray-800 disabled:opacity-50"
+          >
+            {sendMessage.isPending ? "A enviar..." : "Enviar"}
+          </button>
+        </div>
       </form>
     </div>
   );
