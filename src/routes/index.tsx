@@ -674,7 +674,7 @@ function Index() {
 
   // Intersection Observer for Infinite Scroll
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const showHeroSkeleton = loadingProducts || loadingServices || loadingVendors;
+  const showHeroSkeleton = loadingProducts || loadingServices;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
