@@ -446,14 +446,26 @@ export function ReelsFeed() {
                 store:
                   (buyModalItem.store as string) ||
                   (buyModalItem.vendor_name as string) ||
+                  (buyModalItem.vendor_subscriptions?.business_name as string) ||
                   "",
-                whatsapp: buyModalItem.whatsapp as string | undefined,
-                vendor_phone: buyModalItem.vendor_phone as string | undefined,
-                phone: buyModalItem.phone as string | undefined,
+                whatsapp:
+                  (buyModalItem.whatsapp as string) ||
+                  (buyModalItem.vendor_subscriptions?.whatsapp as string) ||
+                  (buyModalItem.vendor_subscriptions?.phone as string) ||
+                  (buyModalItem.phone as string) ||
+                  undefined,
+                vendor_phone:
+                  (buyModalItem.vendor_phone as string) || (buyModalItem.vendor_subscriptions?.phone as string) || undefined,
+                phone: (buyModalItem.phone as string) || (buyModalItem.vendor_subscriptions?.phone as string) || undefined,
                 variants: (buyModalItem.variants as null) || null,
               }
             : { name: "", price: 0, category: "", store: "" }
         }
+      />
+      <CommentsModal
+        open={!!detailModalItem}
+        onClose={() => setDetailModalItem(null)}
+        post={detailModalItem || null}
       />
       <DetailModal open={!!detailModalItem} onClose={() => setDetailModalItem(null)} item={detailModalItem || {}} />
     </div>

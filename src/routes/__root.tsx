@@ -152,7 +152,10 @@ function RootComponent() {
           {/* Global Modals and Navigation */}
           <GlobalComponents />
           <OnboardingGate />
-          <MusaAiFab />
+          {/* Hide global MusaAiFab on Reels page to avoid floating button there */}
+          {typeof window !== "undefined" && !window.location.pathname.startsWith("/reels") && (
+            <MusaAiFab />
+          )}
 
           <Toaster position="top-center" />
         </SellProvider>
