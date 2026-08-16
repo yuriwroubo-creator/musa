@@ -63,7 +63,6 @@ export function useMessages(conversationId: string) {
     mutationFn: async (content: string) => {
       if (!user) throw new Error("Not authenticated");
 
-      // Insert message
       try {
         const { data: message, error } = await supabase
           .from("messages")
@@ -80,34 +79,32 @@ export function useMessages(conversationId: string) {
           toast.error("Erro ao enviar mensagem.");
           throw error;
         }
+
+        const { data: conv, error: convError } = await supabase
+          .from("conversations")
+          .select("participant_a, participant_b")
+          .eq("id", conversationId)
+          .single();
+
+        if (!convError && conv) {
+          const receiverId = conv.participant_a === user.id ? conv.participant_b : conv.participant_a;
+          if (receiverId) {
+            await supabase.from("notifications").insert({
+              user_id: receiverId,
+              title: "Nova mensagem",
+              message: "Recebeu uma nova mensagem no chat.",
+              type: "chat",
+              read: false,
+            });
+          }
+        }
+
         return message;
       } catch (err) {
         console.error("sendMessage failed:", err);
         toast.error("Erro ao enviar mensagem. Confere permissão e tenta novamente.");
         throw err;
       }
-
-      // Find receiver
-      const { data: conv, error: convError } = await supabase
-        .from("conversations")
-        .select("participant_a, participant_b")
-        .eq("id", conversationId)
-        .single();
-
-      if (!convError && conv) {
-        const receiverId = conv.participant_a === user.id ? conv.participant_b : conv.participant_a;
-        if (receiverId) {
-          await supabase.from("notifications").insert({
-            user_id: receiverId,
-            title: "Nova mensagem",
-            message: "Recebeu uma nova mensagem no chat.",
-            type: "chat",
-            read: false,
-          });
-        }
-      }
-
-      return message;
     },
     onSuccess: (newMessage) => {
       queryClient.setQueryData(

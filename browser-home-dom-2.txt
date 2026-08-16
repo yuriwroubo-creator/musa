@@ -1,0 +1,82 @@
+- banner:
+  - button "Menu":
+  - link "MUSA ✦":
+    - /url: /
+    - generic: MUSA
+    - generic: ✦
+  - button "Modo escuro":
+  - button "Carrinho — 0 itens":
+    - generic: "0"
+  - textbox "Buscar":
+    - /placeholder: Buscar em Angola...
+- main:
+  - heading "MUSA" [level=1]
+  - paragraph: Uma vitrine chique para descobrir laces, moda, make, unhas, serviços e criadoras com um feed que aprende com os teus gostos.
+  - button "Criar o meu feed":
+    - text: Criar o meu feed
+  - button "Publicar grátis":
+    - text: Publicar grátis
+  - heading "Para você" [level=2]
+  - paragraph: Produtos e serviços alinhados aos teus gostos
+  - article:
+    - img "Bela cão"
+    - paragraph: Bela cão
+    - img "Comando de play 4"
+    - button "Adicionar aos favoritos":
+    - heading "Comando de play 4" [level=3]
+    - paragraph: 40 000 Kz
+    - button "Comprar"
+    - button "Ver mais detalhes": Ver mais
+    - link "Visitar Loja":
+      - /url: /store/f65c3022-95fb-47b1-88df-b56bda16dc3b
+      - text: Visitar Loja
+- contentinfo:
+  - paragraph: MUSA ✦
+  - paragraph: O mercado de beleza & moda das mulheres de Luanda. Compre, agende e venda gratuitamente.
+  - paragraph: Explorar
+  - paragraph: Produtos
+  - paragraph: Serviços
+  - paragraph: Lojas & Marcas
+  - paragraph: Promoções
+  - paragraph: Vendedoras
+  - paragraph: Criar conta grátis
+  - paragraph: Como funciona
+  - paragraph: Dúvidas frequentes
+  - paragraph: Suporte
+  - paragraph: Contacto
+  - paragraph: Angola
+  - link "romacristiano77@gmail.com":
+    - /url: mailto:romacristiano77@gmail.com
+  - link "+244 946 419 129":
+    - /url: tel:+244946419129
+  - paragraph: © MUSA · Mercado de beleza & moda · Angola
+  - paragraph: Feito com ❤️ para as mulheres angolanas
+- paragraph: Carrinho
+- heading [level=3]: Os teus produtos
+- paragraph: Ainda não adicionaste nada.
+- button:
+- paragraph: O carrinho está vazio.
+- paragraph: Adiciona produtos para veres aqui o total final.
+- paragraph: Total final
+- paragraph: 0 AOA
+- button [disabled]: Limpar
+- button: Continuar
+- navigation:
+  - button "Início":
+    - generic: Início
+  - button "Reels":
+    - generic: Reels
+  - button "Publicar":
+  - button "Favoritos":
+    - generic: Favoritos
+  - button "Perfil":
+    - generic: Perfil
+- dialog "Vender na MUSA":
+  - generic: Vender na MUSAGratuito
+  - button "Fechar":
+  - paragraph: Passo 1 · Dados da Loja
+  - heading "Inicia Sessão para Vender" [level=3]
+  - paragraph: Para publicares na MUSA precisas de associar a tua conta. O registo é grátis.
+  - button "Continuar com a Google"
+- button "Abrir assistente":
+- region "Notifications alt+T"

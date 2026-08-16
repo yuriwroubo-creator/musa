@@ -465,7 +465,11 @@ export function ReelsFeed() {
                   </button>
 
                   <button
-                    onClick={() => setCommentsModalItem(item)}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCommentsModalItem(item);
+                    }}
                     className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 transition hover:scale-110 active:scale-95"
                     aria-label="Comentar"
                   >

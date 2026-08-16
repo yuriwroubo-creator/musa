@@ -109,13 +109,22 @@ function ProfilePage() {
           <div className="px-5 pb-6 sm:px-7">
             <div className="-mt-12 flex items-end justify-between gap-4">
               <div className="flex items-end gap-4">
-                <div className="flex size-24 items-center justify-center overflow-hidden rounded-full border-4 border-background bg-card text-foreground shadow-luxe lg:size-32">
+                <button
+                  type="button"
+                  onClick={() => setEditProfileOpen(true)}
+                  className="group relative flex size-24 items-center justify-center overflow-hidden rounded-full border-4 border-background bg-card text-foreground shadow-luxe transition hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary/40 lg:size-32"
+                  aria-label="Alterar foto de perfil"
+                >
                   {avatarUrl ? (
                     <img src={avatarUrl} alt={fullName} className="size-full object-cover" />
                   ) : (
                     <UserIcon className="size-9" />
                   )}
-                </div>
+                  <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+                  <span className="absolute bottom-2 right-2 flex size-8 items-center justify-center rounded-full bg-black/70 text-white opacity-0 shadow-lg transition group-hover:opacity-100">
+                    <Camera className="size-4" />
+                  </span>
+                </button>
                 <div className="pb-2">
                   <h1 className="max-w-[15rem] truncate text-xl font-black text-white lg:text-3xl">
                     {fullName}

@@ -253,41 +253,59 @@ function Index() {
     },
   });
 
-  const {
-    data: dbVendors,
-    isLoading: loadingVendors,
-    error: errorVendors,
-  } = useQuery({
-    queryKey: ["vendor_subscriptions"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("vendor_subscriptions")
-        .select("id, serial_id, full_name, business_name, store_photo_url, plan, status, phone, whatsapp")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      return (data || []).map((vendor) => {
-        const displayName = vendor.full_name || vendor.serial_id;
-
-        return {
-          id: vendor.id,
-          name: vendor.business_name || displayName,
-          cat: vendor.plan || vendor.status || "Loja",
-          img: vendor.store_photo_url || "",
-          business_name: vendor.business_name || "",
-          full_name: vendor.full_name || "",
-          phone: vendor.phone || "",
-          whatsapp: vendor.whatsapp || "",
-        };
-      });
-    },
-  });
-
   // Base Data (Flatten infinite pages)
   const dbProducts = useMemo(() => productsData?.pages.flat() || [], [productsData]);
   const dbServices = useMemo(() => servicesData?.pages.flat() || [], [servicesData]);
-  const baseVendors = useMemo(() => dbVendors ?? [], [dbVendors]);
+  const baseVendors = useMemo(() => {
+    const vendorsById = new Map<string, any>();
+
+    const hydrateVendor = (vendor: any, fallbackName: string) => {
+      if (!vendor) return;
+
+      const id = vendor.id || vendor.serial_id || vendor.user_id;
+      if (!id) return;
+
+      const current = vendorsById.get(id) || {};
+      vendorsById.set(id, {
+        ...current,
+        ...vendor,
+        id,
+        name: vendor.business_name || vendor.store_name || vendor.full_name || vendor.name || fallbackName,
+        cat: vendor.plan || vendor.status || vendor.cat || "Loja",
+        img: vendor.store_photo_url || vendor.img || "",
+        business_name: vendor.business_name || vendor.store_name || "",
+        full_name: vendor.full_name || "",
+        phone: vendor.phone || "",
+        whatsapp: vendor.whatsapp || "",
+      });
+    };
+
+    for (const product of dbProducts) {
+      hydrateVendor(product.vendor_subscriptions, product.store_name || product.store || "Loja");
+      hydrateVendor(
+        {
+          id: product.vendor_id,
+          serial_id: product.serial_id,
+          business_name: product.store_name || product.store || "",
+        },
+        product.store_name || product.store || "Loja",
+      );
+    }
+
+    for (const service of dbServices) {
+      hydrateVendor(service.vendor_subscriptions, service.store_name || service.store || "Loja");
+      hydrateVendor(
+        {
+          id: service.vendor_id,
+          serial_id: service.serial_id,
+          business_name: service.store_name || service.store || "",
+        },
+        service.store_name || service.store || "Loja",
+      );
+    }
+
+    return Array.from(vendorsById.values());
+  }, [dbProducts, dbServices]);
 
   const baseProducts = useMemo(() => {
     return dbProducts.map((product: any) => ({

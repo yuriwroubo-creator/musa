@@ -33,6 +33,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -44,21 +45,34 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     setIsDragging(false);
   };
 
-  const processFiles = (newFiles: File[]) => {
-    if (files.length + newFiles.length > maxFiles) {
+  const processFiles = (newFiles: File[], mode: "media" | "audio" = "media") => {
+    const filteredByMode =
+      mode === "audio"
+        ? newFiles.filter(
+            (file) =>
+              file.type.startsWith("audio/") || /\.(mp3|wav|aac|m4a)$/i.test(file.name),
+          )
+        : newFiles;
+
+    if (filteredByMode.length === 0) {
+      toast.error("Seleciona pelo menos um ficheiro de áudio válido.");
+      return;
+    }
+
+    if (files.length + filteredByMode.length > maxFiles) {
       toast.error(`Podes adicionar no máximo ${maxFiles} ficheiros.`);
       return;
     }
 
-    const oversizedFiles = newFiles.filter((file) => isOversizedFile(file));
+    const oversizedFiles = filteredByMode.filter((file) => isOversizedFile(file));
     if (oversizedFiles.length > 0) {
       toast.error(`Cada ficheiro pode ter no máximo ${MAX_UPLOAD_FILE_SIZE_LABEL}.`);
       return;
     }
 
-    const validFiles = newFiles.filter((file) => isSupportedMediaFile(file));
+    const validFiles = filteredByMode.filter((file) => isSupportedMediaFile(file));
 
-    if (validFiles.length !== newFiles.length) {
+    if (validFiles.length !== filteredByMode.length) {
       toast.error("Apenas imagens, vídeos e áudios são suportados.");
     }
 
@@ -68,7 +82,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     const newPreviews = validFiles.map((file) => ({
       url: URL.createObjectURL(file),
       type:
-        file.type.split("/")[0] === "audio" || file.name.match(/\.(mp3|wav|aac)$/i)
+        file.type.split("/")[0] === "audio" || file.name.match(/\.(mp3|wav|aac|m4a)$/i)
           ? "audio"
           : file.type.split("/")[0] ||
             (file.name.match(/\.(heic|heif|jpg|jpeg|png|webp)$/i) ? "image" : "video"),
@@ -84,9 +98,9 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, mode: "media" | "audio") => {
     if (e.target.files && e.target.files.length > 0) {
-      processFiles(Array.from(e.target.files));
+      processFiles(Array.from(e.target.files), mode);
       e.target.value = "";
     }
   };
@@ -193,20 +207,42 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
             accept={accept}
             multiple
             className="sr-only"
-            onChange={handleFileChange}
+            onChange={(e) => handleFileChange(e, "media")}
             disabled={isUploading}
           />
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              fileInputRef.current?.click();
-            }}
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept=".mp3,.wav,.aac,.m4a,audio/mpeg,audio/wav,audio/aac,audio/mp4"
+            multiple
+            className="sr-only"
+            onChange={(e) => handleFileChange(e, "audio")}
             disabled={isUploading}
-            className="relative mt-4 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white shadow-neon disabled:opacity-60"
-          >
-            Selecionar ficheiros
-          </button>
+          />
+          <div className="mt-4 flex w-full max-w-sm flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+              disabled={isUploading}
+              className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white shadow-neon disabled:opacity-60"
+            >
+              Selecionar imagem/vídeo
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                audioInputRef.current?.click();
+              }}
+              disabled={isUploading}
+              className="flex-1 rounded-xl border border-primary/40 bg-primary/5 px-4 py-2.5 text-xs font-bold text-primary disabled:opacity-60"
+            >
+              Adicionar áudio
+            </button>
+          </div>
         </div>
       )}
 

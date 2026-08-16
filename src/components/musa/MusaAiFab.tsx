@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { Loader2, Send, X, Maximize, Minimize } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -8,8 +8,6 @@ import { getTasteProfile } from "@/lib/personalization";
 import { useAuth } from "@/hooks/useAuth";
 import { MusaAiLogo } from "./MusaAiLogo";
 import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 // Custom markdown components for rich styling
 const MarkdownComponents = {
@@ -90,6 +88,8 @@ export function MusaAiFab() {
   const [open, setOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [input, setInput] = useState("");
+  const [MarkdownRenderer, setMarkdownRenderer] = useState<ComponentType<any> | null>(null);
+  const [remarkGfmPlugin, setRemarkGfmPlugin] = useState<any>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
@@ -104,6 +104,53 @@ export function MusaAiFab() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let cancelled = false;
+    let idleHandle: number | null = null;
+    let timeoutHandle: number | null = null;
+
+    const preloadMarkdown = async () => {
+      if (MarkdownRenderer) return;
+      const [{ default: ReactMarkdown }, remarkGfmModule] = await Promise.all([
+        import("react-markdown"),
+        import("remark-gfm"),
+      ]);
+
+      if (cancelled) return;
+      setMarkdownRenderer(() => ReactMarkdown);
+      setRemarkGfmPlugin(() => remarkGfmModule.default);
+    };
+
+    if (open) {
+      void preloadMarkdown();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if ("requestIdleCallback" in window) {
+      idleHandle = window.requestIdleCallback(() => {
+        void preloadMarkdown();
+      });
+    } else {
+      timeoutHandle = window.setTimeout(() => {
+        void preloadMarkdown();
+      }, 1500);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleHandle !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleHandle);
+      }
+      if (timeoutHandle !== null) {
+        window.clearTimeout(timeoutHandle);
+      }
+    };
+  }, [open, MarkdownRenderer]);
 
   // Lock background scroll when Drawer / Fullscreen is open
   useEffect(() => {
@@ -243,12 +290,18 @@ export function MusaAiFab() {
                 )}
               >
                 {message.role === "assistant" ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={MarkdownComponents}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
+                  MarkdownRenderer ? (
+                    <MarkdownRenderer
+                      remarkPlugins={remarkGfmPlugin ? [remarkGfmPlugin] : []}
+                      components={MarkdownComponents}
+                    >
+                      {message.content}
+                    </MarkdownRenderer>
+                  ) : (
+                    <p className="whitespace-pre-wrap leading-relaxed text-slate-700 dark:text-white/90">
+                      {message.content}
+                    </p>
+                  )
                 ) : (
                   message.content
                 )}

@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -18,8 +18,13 @@ import { BottomNav } from "@/components/musa/BottomNav";
 import { PublishActionSheet } from "@/components/musa/PublishActionSheet";
 import { SellModal } from "@/components/musa/SellModal";
 import { GlobalAudioPlayer } from "@/components/musa/GlobalAudioPlayer";
-import { OnboardingGate } from "@/components/musa/OnboardingGate";
-import { MusaAiFab } from "@/components/musa/MusaAiFab";
+
+const OnboardingGate = lazy(() =>
+  import("@/components/musa/OnboardingGate").then((module) => ({ default: module.OnboardingGate })),
+);
+const MusaAiFab = lazy(() =>
+  import("@/components/musa/MusaAiFab").then((module) => ({ default: module.MusaAiFab })),
+);
 
 function NotFoundComponent() {
   return (
@@ -151,10 +156,14 @@ function RootComponent() {
 
           {/* Global Modals and Navigation */}
           <GlobalComponents />
-          <OnboardingGate />
+          <Suspense fallback={null}>
+            <OnboardingGate />
+          </Suspense>
           {/* Hide global MusaAiFab on Reels page to avoid floating button there */}
           {typeof window !== "undefined" && !window.location.pathname.startsWith("/reels") && (
-            <MusaAiFab />
+            <Suspense fallback={null}>
+              <MusaAiFab />
+            </Suspense>
           )}
 
           <Toaster position="top-center" />

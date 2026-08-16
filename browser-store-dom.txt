@@ -1,0 +1,35 @@
+- img "Logo"
+- button "Mensagem":
+  - generic: Mensagem
+- button "Seguir":
+  - text: Seguir
+- heading "Logo" [level=1]
+- paragraph: "1"
+- paragraph: Publicações
+- paragraph: "1"
+- paragraph: Seguidores
+- button "Publicações":
+  - text: Publicações
+- button "Mensagens / Interações":
+  - text: Mensagens / Interações
+- heading "Produtos e Serviços" [level=2]
+- img "Comando de play 4"
+- navigation:
+  - button "Início":
+    - generic: Início
+  - button "Reels":
+    - generic: Reels
+  - button "Publicar":
+  - button "Favoritos":
+    - generic: Favoritos
+  - button "Perfil":
+    - generic: Perfil
+- dialog "Vender na MUSA":
+  - generic: Vender na MUSAGratuito
+  - button "Fechar":
+  - paragraph: Passo 1 · Dados da Loja
+  - heading "Inicia Sessão para Vender" [level=3]
+  - paragraph: Para publicares na MUSA precisas de associar a tua conta. O registo é grátis.
+  - button "Continuar com a Google"
+- button "Abrir assistente":
+- region "Notifications alt+T"

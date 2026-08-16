@@ -4,6 +4,7 @@ import { MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useConversations } from "@/hooks/useConversations";
+import { toast } from "sonner";
 
 interface ChatButtonProps {
   vendorUserId: string;
@@ -19,13 +20,17 @@ export function ChatButton({ vendorUserId, className = "", label = "Mensagem" }:
 
   const handleClick = async () => {
     if (!user) {
-      // You could redirect to login here, or trigger a login modal
-      alert("Por favor, inicie sessão para enviar mensagens.");
+      toast.error("Inicia sessão para enviar mensagens.");
       return;
     }
 
-    if (user.id === vendorUserId) {
-      alert("Não pode enviar uma mensagem para si mesmo.");
+    if (!vendorUserId) {
+      toast.error("Não foi possível abrir a conversa.");
+      return;
+    }
+
+    if (String(user.id) === String(vendorUserId)) {
+      toast.error("Não pode enviar uma mensagem para si mesmo.");
       return;
     }
 
@@ -73,7 +78,7 @@ export function ChatButton({ vendorUserId, className = "", label = "Mensagem" }:
       navigate({ to: "/chat/$conversationId", params: { conversationId: newConv.id } });
     } catch (err) {
       console.error("Error starting chat:", err);
-      alert("Ocorreu um erro ao iniciar o chat.");
+      toast.error("Ocorreu um erro ao iniciar o chat.");
     } finally {
       setLoading(false);
     }
@@ -83,7 +88,7 @@ export function ChatButton({ vendorUserId, className = "", label = "Mensagem" }:
     <button
       onClick={handleClick}
       disabled={loading}
-      className={`flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-full font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors ${className}`}
+      className={`flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:opacity-50 ${className}`}
     >
       <MessageCircle size={20} />
       <span>{loading ? "A processar..." : label}</span>

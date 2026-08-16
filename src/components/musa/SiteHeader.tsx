@@ -120,7 +120,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
             {user ? (
               <button
                 onClick={() => navigate({ to: "/perfil" })}
-                className="hidden min-h-[44px] min-w-[44px] items-center justify-center overflow-hidden rounded-full border-2 border-primary/40 shadow-sm transition-all hover:border-primary lg:flex"
+                className="hidden h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-primary/40 shadow-sm transition-all hover:border-primary lg:flex"
                 aria-label="Perfil"
               >
                 {avatarUrl ? (
