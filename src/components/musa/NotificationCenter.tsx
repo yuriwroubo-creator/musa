@@ -50,7 +50,7 @@ export function NotificationCenter() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative flex size-9 items-center justify-center rounded-full hover:bg-secondary transition-colors"
+        className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/80 text-foreground transition-colors hover:bg-white shadow-sm"
         aria-label="Notificações"
       >
         <Bell size={20} className="text-foreground" strokeWidth={1.8} />
@@ -62,13 +62,13 @@ export function NotificationCenter() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-card/95 backdrop-blur-xl border border-border-soft rounded-2xl shadow-neon-lg z-50 overflow-hidden flex flex-col">
+        <div className="absolute right-0 mt-2 flex w-80 flex-col overflow-hidden rounded-2xl border border-gray-200/50 bg-white/90 shadow-2xl backdrop-blur-md sm:w-96">
           <div className="flex items-center justify-between p-4 border-b border-border-soft">
             <h3 className="font-semibold text-foreground text-lg">Notificações</h3>
             {unreadCount > 0 && (
               <button
                 onClick={() => markAllAsRead()}
-                className="text-xs font-semibold text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                className="flex min-h-[44px] min-w-[44px] items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-primary"
               >
                 <Check size={14} />
                 Marcar tudo lido
@@ -91,7 +91,7 @@ export function NotificationCenter() {
                     onClick={() => {
                       if (!notification.read) markAsRead(notification.id);
                     }}
-                    className={`w-full text-left p-4 flex gap-3 hover:bg-accent/40 transition-colors border-l-2 ${
+                    className={`flex w-full gap-3 border-l-2 p-4 text-left transition-colors hover:bg-accent/40 min-h-[44px] ${
                       notification.read 
                         ? 'border-transparent bg-transparent' 
                         : 'border-primary bg-primary/5'

@@ -21,6 +21,7 @@ import {
   getTasteProfile,
   saveTasteProfile,
   scoreCatalogItem,
+  sortForYouItems,
   tasteOptions,
   type TasteProfile,
 } from "@/lib/personalization";
@@ -443,6 +444,11 @@ function Index() {
     return visibleVendors.filter((vendor: any) => followedIds.has(vendor.id || vendor.serial_id));
   }, [visibleVendors, followedVendors]);
 
+  const followedVendorIds = useMemo(
+    () => follows?.map((follow) => follow.following_id) ?? [],
+    [follows],
+  );
+
   const { data: searchResults } = useGlobalSearch(query);
   const { data: databaseSearchResults, isLoading: loadingDatabaseSearch } = useQuery({
     queryKey: ["database-search", q],
@@ -535,11 +541,12 @@ function Index() {
         .slice(0, 24);
     }
     // TODO: fase futura - filtrar por categorias se necessário
-    return [...baseProducts].sort(
-      (a: any, b: any) =>
-        scoreCatalogItem(b, tasteProfile, query) - scoreCatalogItem(a, tasteProfile, query),
-    );
-  }, [q, searchResults, databaseSearchResults, baseProducts, tasteProfile, query]);
+    return sortForYouItems([...baseProducts], {
+      profile: tasteProfile,
+      query,
+      followedVendorIds,
+    });
+  }, [q, searchResults, databaseSearchResults, baseProducts, tasteProfile, query, followedVendorIds]);
 
   const visibleServices = useMemo(() => {
     if (q !== "") {
@@ -599,11 +606,12 @@ function Index() {
         .slice(0, 24);
     }
     // TODO: fase futura - filtrar por categorias se necessário
-    return [...baseServices].sort(
-      (a: any, b: any) =>
-        scoreCatalogItem(b, tasteProfile, query) - scoreCatalogItem(a, tasteProfile, query),
-    );
-  }, [q, searchResults, databaseSearchResults, baseServices, tasteProfile, query]);
+    return sortForYouItems([...baseServices], {
+      profile: tasteProfile,
+      query,
+      followedVendorIds,
+    });
+  }, [q, searchResults, databaseSearchResults, baseServices, tasteProfile, query, followedVendorIds]);
 
   const preferredLabels = useMemo(
     () =>
@@ -648,6 +656,7 @@ function Index() {
 
   // Intersection Observer for Infinite Scroll
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const showHeroSkeleton = loadingProducts || loadingServices || loadingVendors;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -682,12 +691,16 @@ function Index() {
       />
 
       <main className="mx-auto w-full max-w-6xl px-5 lg:px-8">
-        <HeroExperience
-          personalized={tasteProfile.completed}
-          preferredLabels={preferredLabels}
-          onPersonalize={() => setTasteOpen(true)}
-          onPublishClick={() => setPublishSheetOpen(true)}
-        />
+        {showHeroSkeleton ? (
+          <HeroSkeleton />
+        ) : (
+          <HeroExperience
+            personalized={tasteProfile.completed}
+            preferredLabels={preferredLabels}
+            onPersonalize={() => setTasteOpen(true)}
+            onPublishClick={() => setPublishSheetOpen(true)}
+          />
+        )}
 
         {/* TODO: fase futura - StoryRail com categorias */}
         {/* <StoryRail
@@ -743,7 +756,7 @@ function Index() {
               {errorProducts ? (
                 <ErrorState message="Não foi possível carregar os produtos. Tenta novamente." />
               ) : loadingProducts ? (
-                <LoadingGrid />
+                <SectionSkeleton />
               ) : visibleProducts.length === 0 ? (
                 <Empty message="Ainda não há produtos para ti." />
               ) : (
@@ -921,7 +934,7 @@ function SearchResultsView({
         sub="Produtos e serviços encontrados na MUSA"
       />
       {loading && !hasResults ? (
-        <LoadingGrid />
+        <SectionSkeleton />
       ) : !hasResults ? (
         <Empty message={`Não foi encontrado nenhum resultado para "${query}".`} />
       ) : (
@@ -1056,6 +1069,51 @@ function HeroExperience({
         </div>
       </div>
     </section>
+  );
+}
+
+function HeroSkeleton() {
+  return (
+    <section className="relative isolate mt-5 overflow-hidden rounded-[28px] border border-border-soft bg-white/85 p-5 shadow-luxe backdrop-blur-md lg:mt-8">
+      <div className="grid min-h-[360px] gap-8 lg:grid-cols-[1.08fr_0.92fr]">
+        <div className="flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="h-16 w-32 animate-pulse rounded-[20px] bg-gray-200/90" />
+            <div className="h-4 w-full max-w-md animate-pulse rounded-full bg-gray-200/90" />
+            <div className="h-4 w-4/5 animate-pulse rounded-full bg-gray-200/90" />
+          </div>
+          <div className="mt-8 flex flex-wrap gap-2.5">
+            <div className="h-11 w-36 animate-pulse rounded-full bg-gray-200/90" />
+            <div className="h-11 w-32 animate-pulse rounded-full bg-gray-200/90" />
+          </div>
+        </div>
+        <div className="hidden items-end justify-end lg:flex">
+          <div className="w-[310px] rounded-[28px] border border-gray-200/70 bg-white/80 p-3 shadow-lg">
+            <div className="aspect-[9/13] animate-pulse rounded-[22px] bg-gray-200/90" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SectionSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="overflow-hidden rounded-[22px] border border-border-soft bg-white/80 shadow-sm">
+          <div className="aspect-[4/5] animate-pulse bg-gray-200/90" />
+          <div className="space-y-2 p-3">
+            <div className="h-4 w-4/5 animate-pulse rounded-full bg-gray-200/90" />
+            <div className="h-3 w-1/2 animate-pulse rounded-full bg-gray-200/90" />
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="h-10 animate-pulse rounded-xl bg-gray-200/90" />
+              <div className="h-10 animate-pulse rounded-xl bg-gray-200/90" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

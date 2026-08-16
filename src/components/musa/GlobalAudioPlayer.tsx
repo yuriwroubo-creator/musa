@@ -8,7 +8,7 @@ export function GlobalAudioPlayer() {
 
   return (
     <div className="fixed bottom-[78px] left-1/2 z-50 w-[calc(100%-24px)] max-w-sm -translate-x-1/2 lg:bottom-4">
-      <div className="overflow-hidden rounded-[24px] border border-border-soft bg-card/95 shadow-neon-lg backdrop-blur-2xl">
+      <div className="overflow-hidden rounded-[24px] border border-gray-200/50 bg-white/85 shadow-2xl backdrop-blur-md">
         <div className="h-1 w-full bg-secondary/90">
           <div
             className="h-full bg-gradient-to-r from-primary via-[#FF6DB0] to-[#FF9EC2] transition-all duration-100 ease-linear"
@@ -19,7 +19,7 @@ export function GlobalAudioPlayer() {
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3 overflow-hidden">
             <div
-              className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/10"
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/10"
               aria-hidden="true"
             >
               {currentTrackMeta?.artwork ? (
@@ -41,7 +41,7 @@ export function GlobalAudioPlayer() {
           <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={toggle}
-              className="flex size-10 items-center justify-center rounded-full bg-primary text-white shadow-neon transition-transform hover:scale-105 active:scale-95"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-primary text-white shadow-neon transition-transform hover:scale-105 active:scale-95"
               aria-label={isPlaying ? "Pausar áudio" : "Reproduzir áudio"}
             >
               {isPlaying ? (
@@ -52,7 +52,7 @@ export function GlobalAudioPlayer() {
             </button>
             <button
               onClick={clear}
-              className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary"
               aria-label="Fechar áudio"
             >
               <X className="size-4" />

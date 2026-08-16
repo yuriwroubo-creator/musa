@@ -10,6 +10,7 @@ import {
   User,
   Grid3X3,
   Bell,
+  Settings,
 } from "lucide-react";
 import { ChatButton } from "@/components/musa/ChatButton";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFollows } from "@/hooks/useFollows";
 import { DetailModal } from "@/components/musa/DetailModal";
 import { BuyModal } from "@/components/musa/BuyModal";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/store/$id")({
   component: StorePage,
@@ -84,6 +86,59 @@ function StoreInteractionsTab() {
   );
 }
 
+function StorePageSkeleton() {
+  return (
+    <div className="min-h-screen bg-background pb-20">
+      <div className="relative">
+        <div className="h-32 animate-pulse bg-gray-200/90" />
+
+        <div className="relative px-4 pb-4">
+          <div className="absolute -top-12 left-4">
+            <div className="size-24 rounded-full border-4 border-background bg-gray-200/90" />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <div className="h-11 w-28 animate-pulse rounded-full bg-gray-200/90" />
+            <div className="h-11 w-24 animate-pulse rounded-full bg-gray-200/90" />
+          </div>
+
+          <div className="mt-14 space-y-3">
+            <div className="h-7 w-48 animate-pulse rounded-full bg-gray-200/90" />
+            <div className="h-4 w-32 animate-pulse rounded-full bg-gray-200/90" />
+            <div className="h-4 w-64 animate-pulse rounded-full bg-gray-200/90" />
+            <div className="h-4 w-40 animate-pulse rounded-full bg-gray-200/90" />
+            <div className="mt-4 flex gap-6">
+              <div className="h-10 w-16 animate-pulse rounded-full bg-gray-200/90" />
+              <div className="h-10 w-16 animate-pulse rounded-full bg-gray-200/90" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4">
+        <div className="flex gap-2">
+          <div className="h-11 flex-1 animate-pulse rounded-xl bg-gray-200/90" />
+          <div className="h-11 flex-1 animate-pulse rounded-xl bg-gray-200/90" />
+        </div>
+      </div>
+
+      <div className="px-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="overflow-hidden rounded-[20px] border border-border-soft bg-white/80 shadow-sm">
+              <div className="aspect-[4/5] animate-pulse bg-gray-200/90" />
+              <div className="space-y-2 p-3">
+                <div className="h-4 w-3/4 animate-pulse rounded-full bg-gray-200/90" />
+                <div className="h-3 w-1/2 animate-pulse rounded-full bg-gray-200/90" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StorePage() {
   const { id } = Route.useParams();
   const [tab, setTab] = useState<StoreTab>("publicacoes");
@@ -91,6 +146,7 @@ function StorePage() {
   const [buyModalItem, setBuyModalItem] = useState<any | null>(null);
   const { user, signInWithGoogle } = useAuth();
   const { checkIsFollowing, toggleFollow } = useFollows();
+  const navigate = useNavigate();
 
   // Fetch store profile
   const { data: storeProfile, isLoading: loadingProfile, error: profileError } = useQuery({
@@ -184,6 +240,7 @@ function StorePage() {
   });
 
   const isFollowing = storeProfile ? checkIsFollowing(storeProfile.id) : false;
+  const isOwner = String(user?.id) === String(storeProfile?.id);
 
   const handleFollow = () => {
     if (!user) {
@@ -216,11 +273,7 @@ function StorePage() {
   }
 
   if (loadingProfile) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
+    return <StorePageSkeleton />;
   }
 
   const allItems = [...(products || []), ...(services || [])];
@@ -264,6 +317,17 @@ function StorePage() {
 
           {/* Action buttons */}
           <div className="flex justify-end gap-2 pt-2">
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/perfil" })}
+                className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold bg-white/12 text-white backdrop-blur transition hover:bg-white/18"
+                aria-label="Editar perfil"
+              >
+                <Settings className="size-4" />
+                Editar perfil
+              </button>
+            )}
             {storeProfile?.id ? (
               <ChatButton vendorUserId={storeProfile.id} label="Mensagem" />
             ) : (

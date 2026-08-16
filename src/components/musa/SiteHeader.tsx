@@ -39,12 +39,12 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
   const avatarUrl = user?.user_metadata?.['avatar_url'];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border-soft/70 bg-background/76 backdrop-blur-2xl">
+    <header className="sticky top-0 z-40 border-b border-gray-200/50 bg-white/80 backdrop-blur-md shadow-sm">
       <div className="mx-auto w-full max-w-6xl px-5 py-3 lg:px-8 lg:py-3.5">
         <div className="flex items-center justify-between gap-4">
           {/* Mobile menu */}
           <button
-            className="flex size-9 items-center justify-center rounded-full border border-border-soft bg-card/75 text-foreground shadow-sm transition-colors hover:bg-secondary lg:hidden"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-gray-200/60 bg-white/80 text-foreground shadow-sm transition-colors hover:bg-white lg:hidden"
             aria-label="Menu"
             onClick={() => setMenuOpen((v) => !v)}
           >
@@ -82,7 +82,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
             <button
               onClick={onPublishClick}
               id="btn-sell-header"
-              className="sheen mr-1 hidden rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-white shadow-neon transition-all hover:shadow-neon-lg active:scale-95 lg:block"
+              className="sheen mr-1 hidden min-h-[44px] rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-white shadow-neon transition-all hover:shadow-neon-lg active:scale-95 lg:block"
             >
               + Publicar Grátis
             </button>
@@ -90,7 +90,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
             {/* Dark mode toggle */}
             <button
               onClick={() => setDark((v) => !v)}
-              className="flex size-9 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-card"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-white/90"
               aria-label={dark ? "Modo claro" : "Modo escuro"}
             >
               {dark ? (
@@ -110,7 +110,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
             {/* Favorites */}
             <button
               onClick={() => (user ? navigate({ to: "/favoritos" }) : signInWithGoogle())}
-              className="hidden size-9 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-card lg:flex"
+              className="hidden min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-white/90 lg:flex"
               aria-label="Favoritos"
             >
               <Heart className="size-5" strokeWidth={1.6} />
@@ -120,7 +120,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
             {user ? (
               <button
                 onClick={() => navigate({ to: "/perfil" })}
-                className="hidden size-9 items-center justify-center overflow-hidden rounded-full border-2 border-primary/40 shadow-sm transition-all hover:border-primary lg:flex"
+                className="hidden min-h-[44px] min-w-[44px] items-center justify-center overflow-hidden rounded-full border-2 border-primary/40 shadow-sm transition-all hover:border-primary lg:flex"
                 aria-label="Perfil"
               >
                 {avatarUrl ? (
@@ -134,7 +134,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
             ) : (
               <button
                 onClick={signInWithGoogle}
-                className="hidden size-9 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-card lg:flex"
+                className="hidden min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-white/90 lg:flex"
                 aria-label="Entrar"
               >
                 <User className="size-5" strokeWidth={1.6} />
@@ -144,7 +144,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
             {/* Cart */}
             <button
               onClick={onCartClick}
-              className="relative flex size-9 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-card"
+              className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-border-soft hover:bg-white/90"
               aria-label={`Carrinho — ${cartCount} itens`}
             >
               <ShoppingBag className="size-5" strokeWidth={1.6} />
@@ -161,7 +161,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
         </div>
 
         {/* Mobile search */}
-        <div className="glass-panel mt-3 flex items-center gap-2.5 rounded-full px-3.5 py-2.5 lg:hidden">
+        <div className="mt-3 flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-3.5 py-2.5 shadow-sm backdrop-blur-md lg:hidden">
           <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.8} />
           <input
             id="mobile-search-input"
@@ -181,7 +181,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
                 onPublishClick();
                 setMenuOpen(false);
               }}
-              className="sheen w-full rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-neon"
+              className="sheen w-full min-h-[44px] rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-neon"
             >
               + Publicar Produto/Serviço — Grátis
             </button>
@@ -193,7 +193,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
                       navigate({ to: "/perfil" });
                       setMenuOpen(false);
                     }}
-                    className="flex flex-col items-center gap-1 rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                    className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
                   >
                     <User className="size-4" />
                     Perfil
@@ -203,7 +203,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
                       navigate({ to: "/favoritos" });
                       setMenuOpen(false);
                     }}
-                    className="flex flex-col items-center gap-1 rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                    className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
                   >
                     <Heart className="size-4" />
                     Favoritos
@@ -214,7 +214,7 @@ export function SiteHeader({ query, onQueryChange, cartCount, onCartClick, onPub
                   <button
                     key={item}
                     onClick={() => setMenuOpen(false)}
-                    className="rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
+                    className="min-h-[44px] min-w-[44px] rounded-2xl border border-border-soft bg-secondary px-2 py-2.5 text-xs font-semibold text-muted-foreground"
                   >
                     {item}
                   </button>

@@ -82,7 +82,7 @@ function ProfilePage() {
   });
 
   if (loading || !user) {
-    return <div className="flex min-h-screen items-center justify-center">A carregar...</div>;
+    return <ProfileSkeleton />;
   }
 
   const fullName = profile?.full_name || user.user_metadata?.full_name || "Criadora MUSA";
@@ -743,6 +743,62 @@ function LoadingTiles() {
       {Array.from({ length: 4 }).map((_, index) => (
         <div key={index} className="h-48 animate-pulse rounded-[20px] bg-muted" />
       ))}
+    </div>
+  );
+}
+
+function ProfileSkeleton() {
+  return (
+    <div className="min-h-screen bg-background pb-28">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-5 pt-5 lg:px-8 lg:pt-8">
+        <section className="overflow-hidden rounded-[28px] bg-white/90 shadow-luxe backdrop-blur-md">
+          <div className="h-32 animate-pulse bg-gray-200/90 lg:h-44" />
+          <div className="px-5 pb-6 sm:px-7">
+            <div className="-mt-12 flex items-end justify-between gap-4">
+              <div className="flex items-end gap-4">
+                <div className="size-24 rounded-full border-4 border-background bg-gray-200/90 shadow-luxe lg:size-32" />
+                <div className="space-y-3 pb-2">
+                  <div className="h-6 w-56 animate-pulse rounded-full bg-gray-200/90" />
+                  <div className="h-4 w-40 animate-pulse rounded-full bg-gray-200/90" />
+                </div>
+              </div>
+              <div className="size-10 animate-pulse rounded-full bg-gray-200/90" />
+            </div>
+
+            <div className="mt-5 grid grid-cols-4 gap-2 rounded-2xl bg-gray-100/80 p-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="rounded-xl bg-gray-200/90 px-2 py-3">
+                  <div className="mx-auto mb-2 h-7 w-7 rounded-full bg-gray-300/90" />
+                  <div className="mx-auto h-4 w-8 rounded-full bg-gray-300/90" />
+                  <div className="mx-auto mt-2 h-2.5 w-10 rounded-full bg-gray-300/90" />
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-2.5 sm:flex">
+              <div className="h-12 flex-1 animate-pulse rounded-xl bg-gray-200/90" />
+              <div className="h-12 flex-1 animate-pulse rounded-xl bg-gray-200/90" />
+              <div className="h-12 flex-1 animate-pulse rounded-xl bg-gray-200/90" />
+            </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-gray-100/80 p-1.5">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="h-11 animate-pulse rounded-xl bg-gray-200/90" />
+          ))}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="rounded-2xl border border-border-soft bg-white/80 p-5 shadow-sm">
+              <div className="h-4 w-32 animate-pulse rounded-full bg-gray-200/90" />
+              <div className="mt-4 h-10 w-20 animate-pulse rounded-full bg-gray-200/90" />
+              <div className="mt-6 h-px w-full animate-pulse bg-gray-200/90" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

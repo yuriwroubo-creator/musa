@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, type MouseEvent } from "react";
 import {
   Heart,
   MessageCircle,
@@ -11,10 +11,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useFollows } from "@/hooks/useFollows";
 import { BuyModal } from "@/components/musa/BuyModal";
 import { DetailModal } from "@/components/musa/DetailModal";
 import { CommentsModal } from "@/components/musa/CommentsModal";
 import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { AnimatePresence, motion } from "framer-motion";
+import { getTasteProfile, sortForYouItems } from "@/lib/personalization";
 
 function isVideoUrl(url: string) {
   return /\.(mp4|webm|ogg|mov|m4v)$/i.test(url);
@@ -49,12 +53,16 @@ export function ReelsFeed() {
   const [buyModalItem, setBuyModalItem] = useState<Record<string, unknown> | null>(null);
   const [detailModalItem, setDetailModalItem] = useState<Record<string, unknown> | null>(null);
   const [commentsModalItem, setCommentsModalItem] = useState<Record<string, unknown> | null>(null);
+  const [floatingHearts, setFloatingHearts] = useState<Array<{ id: number; x: number; y: number }>>([]);
   const [muted, setMuted] = useState(true);
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const { user, signInWithGoogle } = useAuth();
+  const { follows } = useFollows();
   const navigate = useNavigate();
+  const tasteProfile = getTasteProfile();
+  const heartIdRef = useRef(0);
 
   const {
     data: reelsData,
@@ -103,26 +111,41 @@ export function ReelsFeed() {
   });
 
   const allReels = reelsData?.pages.flat() || [];
+  const followedVendorIds = useMemo(
+    () => follows?.map((follow) => follow.following_id) ?? [],
+    [follows],
+  );
 
-  const reels = searchQuery.trim()
-    ? allReels.filter((item) => {
-        const q = searchQuery.toLowerCase();
-        const vendor = item.vendor_subscriptions || null;
-        const storeName =
-          (vendor?.business_name as string) ||
-          (vendor?.full_name as string) ||
-          (item.profile?.full_name as string) ||
-          (item.store_name as string) ||
-          "";
-        const username = (vendor?.profiles?.username as string) || (item.profile?.username as string) || "";
-        const title = (item.title as string) || "";
-        return (
-          storeName.toLowerCase().includes(q) ||
-          username.toLowerCase().includes(q) ||
-          title.toLowerCase().includes(q)
-        );
-      })
-    : allReels;
+  const reels = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = q
+      ? allReels.filter((item) => {
+          const vendor = item.vendor_subscriptions || null;
+          const storeName =
+            (vendor?.business_name as string) ||
+            (vendor?.full_name as string) ||
+            (item.profile?.full_name as string) ||
+            (item.store_name as string) ||
+            "";
+          const username =
+            (vendor?.profiles?.username as string) || (item.profile?.username as string) || "";
+          const title = (item.title as string) || "";
+          const description = (item.description as string) || "";
+          return (
+            storeName.toLowerCase().includes(q) ||
+            username.toLowerCase().includes(q) ||
+            title.toLowerCase().includes(q) ||
+            description.toLowerCase().includes(q)
+          );
+        })
+      : allReels;
+
+    return sortForYouItems(filtered as any[], {
+      profile: tasteProfile,
+      query: searchQuery,
+      followedVendorIds,
+    });
+  }, [allReels, searchQuery, tasteProfile, followedVendorIds]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -193,11 +216,50 @@ export function ReelsFeed() {
     }
   };
 
+  const handleDoubleTap = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a, input, textarea, select")) return;
+
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
+    }
+
+    const id = heartIdRef.current + 1;
+    heartIdRef.current = id;
+    setFloatingHearts((current) => [...current, { id, x: event.clientX, y: event.clientY }]);
+    window.setTimeout(() => {
+      setFloatingHearts((current) => current.filter((heart) => heart.id !== id));
+    }, 800);
+  };
+
+  const handleWhatsAppClick = (e: MouseEvent<HTMLButtonElement>, item: Record<string, unknown>) => {
+    e.stopPropagation();
+
+    const phone =
+      (item.whatsapp as string) ||
+      (item.vendor_phone as string) ||
+      (item.phone as string) ||
+      ((item.vendor_subscriptions as Record<string, unknown> | null)?.whatsapp as string) ||
+      ((item.vendor_subscriptions as Record<string, unknown> | null)?.phone as string) ||
+      "";
+
+    if (!phone) {
+      toast.warning("Esta loja não tem número de WhatsApp associado.");
+      return;
+    }
+
+    const cleanNumber = phone.replace(/\D/g, "");
+    if (!cleanNumber) {
+      toast.warning("Esta loja não tem um número de WhatsApp válido.");
+      return;
+    }
+
+    window.open(`https://wa.me/${cleanNumber}`, "_blank");
+  };
+
   if (isLoading) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center bg-black">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
+      <ReelsSkeleton />
     );
   }
 
@@ -253,6 +315,24 @@ export function ReelsFeed() {
         </div>
       </div>
 
+      <div className="pointer-events-none absolute inset-0 z-30">
+        <AnimatePresence>
+          {floatingHearts.map((heart) => (
+            <motion.div
+              key={heart.id}
+              initial={{ opacity: 0, scale: 0.45, y: 0 }}
+              animate={{ opacity: 1, scale: 1.1, y: -80 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="fixed"
+              style={{ left: heart.x - 24, top: heart.y - 24 }}
+            >
+              <Heart className="size-12 fill-[#FF5BA3] text-[#FF5BA3] drop-shadow-[0_8px_28px_rgba(255,91,163,.45)]" />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       <div
         ref={containerRef}
         className="h-[100dvh] overflow-y-scroll scroll-smooth snap-y snap-mandatory"
@@ -279,6 +359,7 @@ export function ReelsFeed() {
               <div
                 key={`${item.type}-${itemId}-${index}`}
                 className="relative snap-start h-[100dvh] w-full"
+                onDoubleClick={handleDoubleTap}
               >
                 <div className="absolute inset-0 bg-muted">
                   {mediaUrl && isVideoUrl(mediaUrl) ? (
@@ -310,7 +391,7 @@ export function ReelsFeed() {
 
                 <button
                   onClick={() => setMuted(!muted)}
-                  className="absolute right-4 top-16 flex size-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition hover:bg-white/30"
+                  className="absolute right-4 top-16 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition hover:bg-white/30"
                   aria-label={muted ? "Ativar som" : "Silenciar"}
                 >
                   {muted ? (
@@ -367,7 +448,7 @@ export function ReelsFeed() {
                 <div className="absolute bottom-28 right-4 flex flex-col gap-5">
                   <button
                     onClick={() => handleLike(itemId)}
-                    className="flex flex-col items-center gap-1 transition hover:scale-110 active:scale-95"
+                    className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 transition hover:scale-110 active:scale-95"
                     aria-label="Curtir"
                   >
                     <div className="flex size-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
@@ -385,7 +466,7 @@ export function ReelsFeed() {
 
                   <button
                     onClick={() => setCommentsModalItem(item)}
-                    className="flex flex-col items-center gap-1 transition hover:scale-110 active:scale-95"
+                    className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 transition hover:scale-110 active:scale-95"
                     aria-label="Comentar"
                   >
                     <div className="flex size-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
@@ -396,7 +477,7 @@ export function ReelsFeed() {
 
                   <button
                     onClick={() => handleShare(item)}
-                    className="flex flex-col items-center gap-1 transition hover:scale-110 active:scale-95"
+                    className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 transition hover:scale-110 active:scale-95"
                     aria-label="Partilhar"
                   >
                     <div className="flex size-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
@@ -406,17 +487,8 @@ export function ReelsFeed() {
                   </button>
 
                   <button
-                    onClick={() => {
-                      const phone =
-                        (item.whatsapp as string) ||
-                        (item.phone as string) ||
-                        (profile?.whatsapp as string) ||
-                        (profile?.phone as string);
-                      if (phone) {
-                        window.open(`https://wa.me/${phone.replace(/\D/g, "")}`, "_blank");
-                      }
-                    }}
-                    className="flex flex-col items-center gap-1 transition hover:scale-110 active:scale-95"
+                    onClick={(e) => handleWhatsAppClick(e, item)}
+                    className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 transition hover:scale-110 active:scale-95"
                     aria-label="WhatsApp"
                   >
                     <div className="flex size-12 items-center justify-center rounded-full bg-[#25D366]/80 backdrop-blur-sm">
@@ -471,6 +543,48 @@ export function ReelsFeed() {
         post={commentsModalItem || null}
       />
       <DetailModal open={!!detailModalItem} onClose={() => setDetailModalItem(null)} item={detailModalItem || {}} />
+    </div>
+  );
+}
+
+function ReelsSkeleton() {
+  return (
+    <div className="fixed inset-0 bg-black">
+      <div className="absolute left-0 right-0 top-0 z-20 px-4 pt-4">
+        <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 backdrop-blur-md">
+          <div className="size-4 rounded-full bg-white/20" />
+          <div className="h-4 flex-1 rounded-full bg-white/10" />
+        </div>
+      </div>
+
+      <div className="h-[100dvh] overflow-hidden">
+        <div className="relative h-[100dvh] w-full bg-gradient-to-br from-gray-950 via-black to-gray-900">
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="absolute inset-0 animate-pulse bg-white/5" />
+
+          <div className="absolute bottom-24 left-4 right-20 max-w-md space-y-3">
+            <div className="h-5 w-28 animate-pulse rounded-full bg-white/10" />
+            <div className="space-y-2">
+              <div className="h-4 w-full animate-pulse rounded-full bg-white/10" />
+              <div className="h-4 w-4/5 animate-pulse rounded-full bg-white/10" />
+            </div>
+            <div className="h-6 w-24 animate-pulse rounded-full bg-white/10" />
+            <div className="flex gap-2">
+              <div className="h-10 flex-1 animate-pulse rounded-lg bg-white/10" />
+              <div className="h-10 w-24 animate-pulse rounded-lg bg-white/10" />
+            </div>
+          </div>
+
+          <div className="absolute bottom-28 right-4 flex flex-col gap-5">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="flex min-h-[44px] min-w-[44px] flex-col items-center gap-1">
+                <div className="flex size-12 items-center justify-center rounded-full bg-white/10" />
+                <div className="h-3 w-10 rounded-full bg-white/10" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -94,7 +94,7 @@ export function ItemDrawer({
         aria-modal="true"
         aria-label="Detalhes do item"
         className={cn(
-          "fixed bottom-0 left-1/2 z-90 max-h-[85vh] w-full max-w-[520px] -translate-x-1/2 overflow-y-auto rounded-t-[26px] bg-card px-6 pt-3 pb-8 transition-transform duration-[380ms] ease-[cubic-bezier(.2,.8,.2,1)] sm:bottom-6 sm:rounded-[26px]",
+          "fixed bottom-0 left-1/2 z-90 flex max-h-[85dvh] w-full max-w-[520px] -translate-x-1/2 flex-col overflow-hidden rounded-t-[26px] bg-card shadow-2xl transition-transform duration-[380ms] ease-[cubic-bezier(.2,.8,.2,1)] sm:bottom-6 sm:rounded-[26px]",
           open ? "translate-y-0" : "translate-y-full",
         )}
       >
@@ -102,12 +102,13 @@ export function ItemDrawer({
         <button
           onClick={onClose}
           aria-label="Fechar"
-          className="absolute top-4 right-4 hidden size-8 items-center justify-center rounded-full bg-secondary sm:flex"
+          className="absolute top-4 right-4 hidden min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-secondary sm:flex"
         >
           <X className="size-4" />
         </button>
 
-        <div className="flex items-center gap-3 border-b border-border-soft pb-3.5">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+          <div className="flex items-center gap-3 border-b border-border-soft pb-3.5">
           {item?.img ? (
             <img
               src={item.img}
@@ -131,46 +132,47 @@ export function ItemDrawer({
                 {vendor.business_name || vendor.full_name || "Loja MUSA"}
               </p>
             )}
+            </div>
           </div>
-        </div>
 
-        {item?.description && (
-          <div className="mt-4 rounded-2xl border border-border-soft bg-secondary/50 p-4">
-            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-              Detalhes
-            </p>
-            <p className="mt-2 text-sm leading-6 text-foreground/90">{item.description}</p>
-          </div>
-        )}
+          {item?.description && (
+            <div className="mt-4 rounded-2xl border border-border-soft bg-secondary/50 p-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                Detalhes
+              </p>
+              <p className="mt-2 text-sm leading-6 text-foreground/90">{item.description}</p>
+            </div>
+          )}
 
-        <Label>{isProduct ? "Tamanho" : "Data"}</Label>
-        <Swatches options={rowA} selected={optA} onSelect={setOptA} />
-        <Label>{isProduct ? "Cor" : "Horário"}</Label>
-        <Swatches options={rowB} selected={optB} onSelect={setOptB} />
+          <Label>{isProduct ? "Tamanho" : "Data"}</Label>
+          <Swatches options={rowA} selected={optA} onSelect={setOptA} />
+          <Label>{isProduct ? "Cor" : "Horário"}</Label>
+          <Swatches options={rowB} selected={optB} onSelect={setOptB} />
 
-        <button
-          onClick={() => item && onConfirm(item)}
-          className="mt-6 w-full rounded-2xl bg-primary py-3.5 text-[13px] font-bold text-primary-foreground shadow-neon-lg transition-transform active:scale-[0.98]"
-        >
-          {isProduct ? "Adicionar ao Carrinho" : "Confirmar Agendamento"}
-        </button>
-
-        {whatsappUrl && (
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 flex w-full items-center justify-center rounded-2xl border border-primary/30 bg-accent py-3.5 text-[13px] font-bold text-accent-foreground transition-transform active:scale-[0.98]"
+          <button
+            onClick={() => item && onConfirm(item)}
+            className="mt-6 flex min-h-[44px] w-full items-center justify-center rounded-2xl bg-primary py-3.5 text-[13px] font-bold text-primary-foreground shadow-neon-lg transition-transform active:scale-[0.98]"
           >
-            Estou interessado
-          </a>
-        )}
+            {isProduct ? "Adicionar ao Carrinho" : "Confirmar Agendamento"}
+          </button>
 
-        {item?.vendor_id && (
-          <div className="mt-8 border-t border-border-soft pt-4">
-            <ReviewSection vendorId={item.vendor_id} />
-          </div>
-        )}
+          {whatsappUrl && (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 flex min-h-[44px] w-full items-center justify-center rounded-2xl border border-primary/30 bg-accent py-3.5 text-[13px] font-bold text-accent-foreground transition-transform active:scale-[0.98]"
+            >
+              Estou interessado
+            </a>
+          )}
+
+          {item?.vendor_id && (
+            <div className="mt-8 border-t border-border-soft pt-4">
+              <ReviewSection vendorId={item.vendor_id} />
+            </div>
+          )}
+        </div>
       </div>
     </>
   );

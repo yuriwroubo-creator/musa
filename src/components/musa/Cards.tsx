@@ -203,7 +203,7 @@ export function ProductCard({
           onClick={handleFavoriteClick}
           disabled={toggleFavorite.isPending}
           aria-label="Adicionar aos favoritos"
-          className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-white/12 text-white shadow-sm backdrop-blur-sm transition-all hover:scale-105 active:scale-90"
+          className="absolute right-2 top-2 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/12 text-white shadow-sm backdrop-blur-sm transition-all hover:scale-105 active:scale-90"
         >
           <Heart
             className={cn(
@@ -355,7 +355,7 @@ export function ServiceCard({
           onClick={handleFavoriteClick}
           disabled={toggleFavorite.isPending}
           aria-label="Adicionar aos favoritos"
-          className="flex size-7 items-center justify-center rounded-full transition-all active:scale-90 hover:bg-white/10"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition-all active:scale-90 hover:bg-white/10"
         >
           <Heart
             className={cn(

@@ -164,6 +164,8 @@ export function SellModal({
   const [productType, setProductType] = useState<"produto" | "servico">("produto");
   const [catOpen, setCatOpen] = useState(false);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [reelAudioMode, setReelAudioMode] = useState<"original" | "music">("original");
+  const [reelAudioLabel, setReelAudioLabel] = useState("");
 
   const code = useMemo(() => `MUSA-${Math.floor(10000 + Math.random() * 89999)}`, []);
 
@@ -292,13 +294,13 @@ export function SellModal({
       aria-modal="true"
       aria-label="Vender na MUSA"
       className={cn(
-        "fixed inset-0 z-100 overflow-y-auto bg-background transition-transform duration-[400ms] ease-[cubic-bezier(.2,.8,.2,1)]",
+        "fixed inset-0 z-100 flex items-end justify-center bg-black/45 px-3 pb-3 backdrop-blur-sm transition-transform duration-[400ms] ease-[cubic-bezier(.2,.8,.2,1)]",
         open ? "translate-y-0" : "translate-y-full",
       )}
     >
-      <div className="mx-auto w-full max-w-2xl">
+      <div className="flex w-full max-w-2xl max-h-[85dvh] flex-col overflow-hidden rounded-[28px] border border-border-soft bg-card shadow-2xl">
         {/* Header */}
-        <div className="sticky top-0 z-5 flex items-center justify-between border-b border-border-soft bg-background/95 px-5 pb-2.5 pt-5 backdrop-blur-md">
+        <div className="shrink-0 flex items-center justify-between border-b border-border-soft bg-white/90 px-5 pb-2.5 pt-5 backdrop-blur-md">
           <div>
             <span className="display text-[17px]">
               {isReel ? "Publicar Reel" : "Vender na MUSA"}
@@ -310,7 +312,7 @@ export function SellModal({
           <button
             onClick={handleClose}
             aria-label="Fechar"
-            className="flex size-9 items-center justify-center rounded-full bg-secondary"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-secondary"
           >
             <X className="size-4" strokeWidth={1.8} />
           </button>
@@ -331,7 +333,7 @@ export function SellModal({
           </div>
         )}
 
-        <div className="px-5 pt-4 pb-28">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-6">
           <p className="pb-4 text-xs text-muted-foreground">
             {isReel && step === 2
               ? "Passo 2 · Criar Reel (fotos/vídeos verticais)"
@@ -403,7 +405,7 @@ export function SellModal({
                     key={type}
                     onClick={() => setProductType(type)}
                     className={cn(
-                      "flex flex-1 items-center justify-center gap-1.5 rounded-[14px] py-2.5 text-[12px] font-bold capitalize transition-all",
+                      "flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-[14px] py-2.5 text-[12px] font-bold capitalize transition-all",
                       productType === type
                         ? "bg-primary text-primary-foreground shadow-neon"
                         : "text-muted-foreground hover:bg-accent/50",
@@ -499,6 +501,64 @@ export function SellModal({
                   </p>
                 )}
               </div>
+              {isReel && (
+                <div className="mb-5 rounded-2xl border border-border-soft bg-background/70 p-4">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    Musa Studio
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setReelAudioMode("original")}
+                      className={cn(
+                        "min-h-[44px] rounded-xl border px-3 py-2 text-[12px] font-bold transition-all",
+                        reelAudioMode === "original"
+                          ? "border-primary bg-primary text-primary-foreground shadow-neon"
+                          : "border-border-soft bg-card text-muted-foreground hover:border-primary/30",
+                      )}
+                    >
+                      Áudio original
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReelAudioMode("music")}
+                      className={cn(
+                        "min-h-[44px] rounded-xl border px-3 py-2 text-[12px] font-bold transition-all",
+                        reelAudioMode === "music"
+                          ? "border-primary bg-primary text-primary-foreground shadow-neon"
+                          : "border-border-soft bg-card text-muted-foreground hover:border-primary/30",
+                      )}
+                    >
+                      Música de fundo
+                    </button>
+                  </div>
+                  {reelAudioMode === "music" && (
+                    <label className="mt-3 block">
+                      <span className="mb-1.5 block px-1 text-[11.5px] font-bold text-muted-foreground">
+                        Escolher Música de Fundo (MP3)
+                      </span>
+                      <input
+                        type="file"
+                        accept=".mp3,audio/mpeg"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          setReelAudioLabel(file?.name || "");
+                        }}
+                        className="w-full rounded-xl border border-border-soft bg-background px-4 py-3 text-[13px] text-muted-foreground file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-[11px] file:font-bold file:text-primary-foreground"
+                      />
+                      {reelAudioLabel && (
+                        <p className="mt-1.5 px-1 text-[10.5px] font-medium text-primary">
+                          Selecionado: {reelAudioLabel}
+                        </p>
+                      )}
+                    </label>
+                  )}
+                  <p className="mt-3 text-[10.5px] leading-5 text-muted-foreground">
+                    Esta UI é uma preparação visual do Musa Studio. O áudio será persistido na fase
+                    seguinte.
+                  </p>
+                </div>
+              )}
               <ValidationList errors={step2Errors} />
             </div>
           ) : step === 3 ? (
@@ -520,11 +580,11 @@ export function SellModal({
 
         {/* Footer actions */}
         {user && step < 3 && (
-          <div className="sticky bottom-0 border-t border-border-soft bg-background/80 p-5 backdrop-blur-md lg:p-6">
+          <div className="shrink-0 border-t border-border-soft bg-white/90 p-5 backdrop-blur-md lg:p-6">
             <button
               onClick={step === 1 ? handleNext : () => mutation.mutate()}
               disabled={step === 1 ? !step1Valid : !step2Valid || mutation.isPending}
-              className="flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3.5 text-[13px] font-bold text-primary-foreground shadow-neon transition-all disabled:opacity-50"
+              className="flex min-h-[44px] w-full items-center justify-center rounded-xl bg-primary px-4 py-3.5 text-[13px] font-bold text-primary-foreground shadow-neon transition-all disabled:opacity-50"
             >
               {mutation.isPending ? "A publicar..." : step === 1 ? "Continuar" : "Publicar Agora"}
             </button>

@@ -117,10 +117,10 @@ export function CommentsModal({ open, onClose, post }: any) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl sm:rounded-t-2xl rounded-t-2xl bg-card p-0"
+        className="w-full max-w-xl overflow-hidden rounded-t-2xl bg-card p-0"
         style={{ margin: 0 }}
       >
-        <div className="flex flex-col max-h-[80dvh] overflow-hidden">
+        <div className="flex max-h-[85dvh] flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/6">
             <h3 className="text-lg font-bold">Comentários</h3>
             <button onClick={onClose} className="p-2 rounded-full">
@@ -128,7 +128,7 @@ export function CommentsModal({ open, onClose, post }: any) {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4">
             {loading ? (
               <div className="flex justify-center py-6">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -150,7 +150,10 @@ export function CommentsModal({ open, onClose, post }: any) {
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="sticky bottom-0 z-40 border-t bg-card px-4 py-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <form
+            onSubmit={handleSubmit}
+            className="shrink-0 border-t bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+          >
             <div className="flex gap-2">
               <input
                 value={newComment}
