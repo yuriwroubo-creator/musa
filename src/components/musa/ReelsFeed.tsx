@@ -47,6 +47,7 @@ function mapReelItem(item: Record<string, unknown>, type: "product" | "service")
 export function ReelsFeed() {
   const [buyModalItem, setBuyModalItem] = useState<Record<string, unknown> | null>(null);
   const [detailModalItem, setDetailModalItem] = useState<Record<string, unknown> | null>(null);
+  const [commentsModalItem, setCommentsModalItem] = useState<Record<string, unknown> | null>(null);
   const [muted, setMuted] = useState(true);
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
@@ -382,6 +383,7 @@ export function ReelsFeed() {
                   </button>
 
                   <button
+                    onClick={() => setCommentsModalItem(item)}
                     className="flex flex-col items-center gap-1 transition hover:scale-110 active:scale-95"
                     aria-label="Comentar"
                   >
@@ -463,9 +465,9 @@ export function ReelsFeed() {
         }
       />
       <CommentsModal
-        open={!!detailModalItem}
-        onClose={() => setDetailModalItem(null)}
-        post={detailModalItem || null}
+        open={!!commentsModalItem}
+        onClose={() => setCommentsModalItem(null)}
+        post={commentsModalItem || null}
       />
       <DetailModal open={!!detailModalItem} onClose={() => setDetailModalItem(null)} item={detailModalItem || {}} />
     </div>

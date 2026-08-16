@@ -23,8 +23,8 @@ interface MediaUploaderProps {
 export const MediaUploader: React.FC<MediaUploaderProps> = ({
   onUploadComplete,
   maxFiles = 5,
-  accept = "image/*,video/*,audio/*,.jpg,.jpeg,.png,.webp,.heic,.heif,.mp4,.mov,.m4v,.mp3,.wav,.aac,.m4a",
-  capture,
+  // Use explicit extensions to reduce chance mobile browsers open camera directly
+  accept = ".jpg,.jpeg,.png,.webp,.heic,.heif,.mp4,.mov,.m4v,.mp3,.wav,.aac,.m4a",
 }) => {
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
@@ -192,7 +192,6 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
             type="file"
             accept={accept}
             multiple
-            capture={capture}
             className="sr-only"
             onChange={handleFileChange}
             disabled={isUploading}
