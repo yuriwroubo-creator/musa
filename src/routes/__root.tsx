@@ -15,6 +15,7 @@ import { Toaster } from "../components/ui/sonner";
 import { SellProvider, useSellModal } from "@/lib/SellContext";
 import { AudioProvider } from "@/lib/AudioContext";
 import { BottomNav } from "@/components/musa/BottomNav";
+import { PublishActionSheet } from "@/components/musa/PublishActionSheet";
 import { SellModal } from "@/components/musa/SellModal";
 import { GlobalAudioPlayer } from "@/components/musa/GlobalAudioPlayer";
 import { OnboardingGate } from "@/components/musa/OnboardingGate";
@@ -87,17 +88,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "theme-color", content: "#FF2D78" },
       { title: "MUSA — Mercado de Beleza & Moda" },
-      {
-        name: "description",
-        content:
-          "Marketplace de beleza e moda em Luanda: produtos e serviços de vendedoras verificadas.",
-      },
+         { name: "description", content: "Marketplace de beleza e moda em Angola: produtos e serviços de vendedoras verificadas." },
       { property: "og:title", content: "MUSA — Mercado de Beleza & Moda" },
       {
         property: "og:description",
         content:
-          "Marketplace de beleza e moda em Luanda: produtos e serviços de vendedoras verificadas.",
-      },
+             "Marketplace de beleza e moda em Angola: produtos e serviços de vendedoras verificadas." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -166,17 +162,34 @@ function RootComponent() {
 }
 
 function GlobalComponents() {
-  const { sellOpen, setSellOpen } = useSellModal();
+  const {
+    sellOpen,
+    setSellOpen,
+    publishSheetOpen,
+    setPublishSheetOpen,
+    openPublish,
+    publishMode,
+  } = useSellModal();
   return (
     <>
       <BottomNav
-        onSellClick={() => setSellOpen(true)}
+        onSellClick={() => setPublishSheetOpen(true)}
         onSearchClick={() => {
           window.scrollTo({ top: 0, behavior: "smooth" });
           setTimeout(() => document.getElementById("mobile-search-input")?.focus(), 100);
         }}
       />
-      <SellModal open={sellOpen} onClose={() => setSellOpen(false)} />
+      <PublishActionSheet
+        open={publishSheetOpen}
+        onClose={() => setPublishSheetOpen(false)}
+        onPublishSite={() => openPublish("site")}
+        onPublishReel={() => openPublish("reel")}
+      />
+      <SellModal
+        open={sellOpen}
+        onClose={() => setSellOpen(false)}
+        isReel={publishMode === "reel"}
+      />
       <GlobalAudioPlayer />
     </>
   );

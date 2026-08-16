@@ -28,17 +28,17 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MUSA — Mercado de Beleza & Moda em Luanda" },
+      { title: "MUSA — Mercado de Beleza & Moda em Angola" },
       {
         name: "description",
         content:
-          "MUSA reúne moda, cabelos, maquilhagem e serviços de beleza de vendedoras verificadas em Luanda. Compre produtos e agende profissionais.",
+          "MUSA reúne moda, cabelos, maquilhagem e serviços de beleza de vendedoras verificadas em Angola. Compre produtos e agende profissionais.",
       },
-      { property: "og:title", content: "MUSA — Mercado de Beleza & Moda em Luanda" },
+      { property: "og:title", content: "MUSA — Mercado de Beleza & Moda em Angola" },
       {
         property: "og:description",
         content:
-          "Produtos e serviços de beleza de empreendedoras verificadas em Luanda. Compre, agende e venda na MUSA.",
+          "Produtos e serviços de beleza de empreendedoras verificadas em Angola. Compre, agende e venda na MUSA.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -187,7 +187,7 @@ function Index() {
   const [cartOpen, setCartOpen] = useState(false);
   const [buyModalItem, setBuyModalItem] = useState<any | null>(null);
   const [detailModalItem, setDetailModalItem] = useState<any | null>(null);
-  const { setSellOpen } = useSellModal();
+  const { setPublishSheetOpen } = useSellModal();
   const [cart, setCart] = useState<CartEntry[]>(readStoredCart);
   const [tasteProfile, setTasteProfile] = useState<TasteProfile>(() => getTasteProfile());
   const [tasteOpen, setTasteOpen] = useState(false);
@@ -210,7 +210,8 @@ function Index() {
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select("*, profiles(id, store_name, avatar_url, username)")
+        .or("is_reel.is.null,is_reel.eq.false")
         .order("created_at", { ascending: false })
         .range(pageParam * 12, (pageParam + 1) * 12 - 1);
       if (error) {
@@ -237,6 +238,7 @@ function Index() {
       const { data, error } = await supabase
         .from("services")
         .select("*")
+        .or("is_reel.is.null,is_reel.eq.false")
         .order("created_at", { ascending: false })
         .range(pageParam * 12, (pageParam + 1) * 12 - 1);
       if (error) {
@@ -286,7 +288,13 @@ function Index() {
   const baseProducts = useMemo(() => {
     return dbProducts.map((product: any) => ({
       ...product,
-      store_name: product.store_name || product.store || "Loja",
+      user_id: product.user_id || product.profiles?.id || null,
+      store_name:
+      product.profiles?.store_name ||
+      product.profiles?.username ||
+      product.store_name ||
+      product.store ||
+      "Loja sem nome",
       phone: product.phone || "",
       whatsapp: product.whatsapp || "",
     }));
@@ -586,25 +594,6 @@ function Index() {
     );
   }, [q, searchResults, databaseSearchResults, baseServices, tasteProfile, query]);
 
-  const forYouItems = useMemo(() => {
-    const productItems = [...baseProducts].map((item: any) => ({
-      ...item,
-      _kind: "product" as const,
-      _date: new Date(item.created_at || 0).getTime(),
-      _taste: scoreCatalogItem(item, tasteProfile, ""),
-    }));
-    const serviceItems = [...baseServices].map((item: any) => ({
-      ...item,
-      _kind: "service" as const,
-      _date: new Date(item.created_at || 0).getTime(),
-      _taste: scoreCatalogItem(item, tasteProfile, ""),
-    }));
-
-    return [...productItems, ...serviceItems]
-      .sort((a: any, b: any) => b._taste - a._taste || b._date - a._date)
-      .slice(0, 8);
-  }, [baseProducts, baseServices, tasteProfile]);
-
   const preferredLabels = useMemo(
     () =>
       tasteProfile.categories
@@ -678,7 +667,7 @@ function Index() {
         onQueryChange={setQuery}
         cartCount={cart.reduce((total, item) => total + item.quantity, 0)}
         onCartClick={() => setCartOpen(true)}
-        onSellClick={() => setSellOpen(true)}
+        onPublishClick={() => setPublishSheetOpen(true)}
       />
 
       <main className="mx-auto w-full max-w-6xl px-5 lg:px-8">
@@ -686,7 +675,7 @@ function Index() {
           personalized={tasteProfile.completed}
           preferredLabels={preferredLabels}
           onPersonalize={() => setTasteOpen(true)}
-          onSellClick={() => setSellOpen(true)}
+          onPublishClick={() => setPublishSheetOpen(true)}
         />
 
         {/* TODO: fase futura - StoryRail com categorias */}
@@ -738,12 +727,7 @@ function Index() {
           />
         ) : (
           <>
-            <ForYouFeed
-              items={forYouItems}
-            />
-
-            {/* Feed principal de produtos combinado com "Para você" */}
-            <section>
+            <section id="for-you-feed">
               <SectionTitle title="Para você" sub="Produtos e serviços alinhados aos teus gostos" />
               {errorProducts ? (
                 <ErrorState message="Não foi possível carregar os produtos. Tenta novamente." />
@@ -832,7 +816,7 @@ function Index() {
               <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.07em] text-muted-foreground">
                 Contacto
               </p>
-              <p className="mb-2 text-[12.5px] text-muted-foreground">Luanda, Angola</p>
+              <p className="mb-2 text-[12.5px] text-muted-foreground">Angola</p>
               <a
                 href="mailto:romacristiano77@gmail.com"
                 className="mb-2 block text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
@@ -849,7 +833,7 @@ function Index() {
           </div>
           <div className="mt-8 flex flex-col items-center gap-2 border-t border-border-soft pt-6 sm:flex-row sm:justify-between">
             <p className="text-[10.5px] text-muted-foreground">
-              © MUSA · Mercado de beleza & moda · Luanda, Angola
+              © MUSA · Mercado de beleza & moda · Angola
             </p>
             <p className="text-[10.5px] text-muted-foreground">
               Feito com ❤️ para as mulheres angolanas
@@ -981,96 +965,6 @@ function SearchResultsView({
                 ))}
               </div>
             </div>
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function ForYouFeed({
-  items,
-}: {
-  items: any[];
-}) {
-  return (
-    <section id="for-you-feed" className="pt-5">
-      <div className="flex items-end justify-between gap-3">
-        <SectionTitle title="Para você" sub="Últimas publicações alinhadas ao teu gosto" />
-        <span className="mb-1 hidden rounded-full bg-accent px-3 py-1 text-[10px] font-bold text-accent-foreground sm:inline-flex">
-          Feed
-        </span>
-      </div>
-      {items.length === 0 ? (
-        <Empty message="O feed Para você vai aparecer aqui quando houver publicações reais." />
-      ) : (
-        <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pt-3.5 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
-          {items.map((item: any) =>
-            item._kind === "product" ? (
-              <div key={`feed-product-${item.id}`} className="w-[168px] shrink-0 lg:w-auto">
-                <ProductCard
-                  product={{
-                    ...item,
-                    price:
-                      typeof item.price === "number"
-                        ? `${item.price.toLocaleString("pt-AO")} AOA`
-                        : item.price || "Preço sob consulta",
-                    rating: item.rating || "Novo",
-                    store: item.store || item.vendor_name || "Loja",
-                    img:
-                      item.img ||
-                      item.image_url ||
-                      item.media_urls?.find((url: string) =>
-                        /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url),
-                      ) ||
-                      "",
-                    variants: item.variants || null,
-                  }}
-                  onBuy={() => {
-                    recordInteraction(item);
-                    setBuyModalItem(item);
-                  }}
-                  onDetails={() => {
-                    recordInteraction(item);
-                    setDetailModalItem(item);
-                  }}
-                />
-              </div>
-            ) : (
-              <div key={`feed-service-${item.id}`} className="w-[280px] shrink-0 lg:w-auto">
-                <ServiceCard
-                  service={{
-                    ...item,
-                    title: item.title || item.description || item.name,
-                    price:
-                      typeof item.price === "number"
-                        ? `${item.price.toLocaleString("pt-AO")} AOA`
-                        : item.price || "Preço sob consulta",
-                    home: Boolean(item.home),
-                    rating: item.rating || "Novo",
-                    img:
-                      item.img ||
-                      item.image_url ||
-                      item.media_urls?.find((url: string) =>
-                        /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(url),
-                      ) ||
-                      "",
-                  }}
-                  onBook={() => {
-                    recordInteraction(item);
-                    setBuyModalItem({
-                      ...item,
-                      name: item.name || item.title,
-                      store: item.store || item.vendor_name,
-                    });
-                  }}
-                  onDetails={() => {
-                    recordInteraction(item);
-                    setDetailModalItem(item);
-                  }}
-                />
-              </div>
-            ),
           )}
         </div>
       )}

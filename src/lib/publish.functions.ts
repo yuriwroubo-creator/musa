@@ -106,6 +106,7 @@ const publishSchema = z.object({
   user_id: z.string().min(1),
   productType: z.enum(["produto", "servico"]),
   media_urls: z.array(z.string()).optional(),
+  is_reel: z.boolean().optional().default(false),
 });
 
 const updateItemSchema = z.object({
@@ -359,9 +360,16 @@ export const publishItemFn = createServerFn({ method: "POST" })
       vendor_id: vendorId,
       flagged_for_review: data.flagged_for_review || false,
       media_urls: data.media_urls || [],
+      is_reel: data.is_reel ?? false,
     };
 
-    const { error: insertError } = await supabase.from(table).insert(payload);
+    let { error: insertError } = await supabase.from(table).insert(payload);
+
+    if (insertError && isSchemaCacheColumnError(insertError, "is_reel")) {
+      const { is_reel: _removed, ...payloadWithoutReel } = payload;
+      const retry = await supabase.from(table).insert(payloadWithoutReel);
+      insertError = retry.error;
+    }
 
     if (insertError) {
       console.error(`[PUBLISH] Erro ao inserir na tabela ${table}:`, insertError);

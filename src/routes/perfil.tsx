@@ -56,7 +56,7 @@ type ProfileTab = "publicacoes" | "colecoes" | "estatisticas";
 
 function ProfilePage() {
   const { user, loading, signOut } = useAuth();
-  const { setSellOpen } = useSellModal();
+  const { setPublishSheetOpen } = useSellModal();
   const navigate = useNavigate();
   const [tab, setTab] = useState<ProfileTab>("publicacoes");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -100,7 +100,7 @@ function ProfilePage() {
         onQueryChange={() => {}}
         cartCount={0}
         onCartClick={() => {}}
-        onSellClick={() => setSellOpen(true)}
+        onPublishClick={() => setPublishSheetOpen(true)}
       />
 
       <main className="mx-auto w-full max-w-5xl px-5 pt-5 lg:px-8 lg:pt-8">
@@ -157,7 +157,7 @@ function ProfilePage() {
 
             <div className="mt-5 grid grid-cols-2 gap-2.5 sm:flex">
               <button
-                onClick={() => setSellOpen(true)}
+                onClick={() => setPublishSheetOpen(true)}
                 className="sheen flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-bold text-white shadow-neon"
               >
                 <Plus className="size-4" />
@@ -204,7 +204,7 @@ function ProfilePage() {
 
         <section className="mt-5">
           {tab === "publicacoes" && (
-            <ProfileListings vendorId={stats.vendorId} onCreate={() => setSellOpen(true)} />
+            <ProfileListings vendorId={stats.vendorId} onCreate={() => setPublishSheetOpen(true)} />
           )}
           {tab === "colecoes" && <ProfileCollections />}
           {tab === "estatisticas" && <ProfileStats stats={stats} />}

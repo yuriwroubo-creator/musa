@@ -114,6 +114,7 @@ function validateStep2(
   productDesc: string,
   productType: "produto" | "servico",
   mediaUrls: string[],
+  isReel: boolean,
 ) {
   const errors: string[] = [];
   if (meaningfulWords(productName).length < 2) {
@@ -132,13 +133,23 @@ function validateStep2(
   if (hasBlockedWords(productName, productDesc)) {
     errors.push("Remove palavras ofensivas, obscenas ou ilegais da publicação.");
   }
-  if (productType === "produto" && mediaUrls.length === 0) {
+  if (isReel && mediaUrls.length === 0) {
+    errors.push("Reels requerem pelo menos 1 foto ou vídeo vertical.");
+  } else if (productType === "produto" && mediaUrls.length === 0) {
     errors.push("Produtos requerem pelo menos 1 foto.");
   }
   return errors;
 }
 
-export function SellModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function SellModal({
+  open,
+  onClose,
+  isReel = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  isReel?: boolean;
+}) {
   const { user, session, signInWithGoogle } = useAuth();
   const [step, setStep] = useState(1);
   const [turnstileToken, setTurnstileToken] = useState("");
@@ -160,8 +171,17 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
     [shopName, ownerName, phone],
   );
   const step2Errors = useMemo(
-    () => validateStep2(productName, productPrice, productCategory, productDesc, productType, mediaUrls),
-    [productName, productPrice, productCategory, productDesc, productType, mediaUrls],
+    () =>
+      validateStep2(
+        productName,
+        productPrice,
+        productCategory,
+        productDesc,
+        productType,
+        mediaUrls,
+        isReel,
+      ),
+    [productName, productPrice, productCategory, productDesc, productType, mediaUrls, isReel],
   );
   const step1Valid = step1Errors.length === 0;
   const step2Valid = step2Errors.length === 0;
@@ -175,6 +195,7 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
         productDesc,
         productType,
         mediaUrls,
+        isReel,
       );
       if (currentStepErrors.length > 0) {
         throw new Error(currentStepErrors[0]);
@@ -210,6 +231,7 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
           access_token: session?.access_token || "",
           user_id: user?.id || "",
           media_urls: mediaUrls,
+          is_reel: isReel,
         },
       });
       if (!res.success) throw new Error(res.error || "Erro ao publicar.");
@@ -217,8 +239,10 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
     },
     onSuccess: () => {
       setStep(3);
-      toast.success("Publicado com sucesso! 🎉", {
-        description: "O teu artigo já está visível na plataforma MUSA.",
+      toast.success(isReel ? "Reel publicado! 🎬" : "Publicado com sucesso! 🎉", {
+        description: isReel
+          ? "O teu reel já está visível no feed imersivo."
+          : "O teu artigo já está visível na plataforma MUSA.",
       });
     },
     onError: (error: unknown) => {
@@ -271,7 +295,9 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
         {/* Header */}
         <div className="sticky top-0 z-5 flex items-center justify-between border-b border-border-soft bg-background/95 px-5 pb-2.5 pt-5 backdrop-blur-md">
           <div>
-            <span className="display text-[17px]">Vender na MUSA</span>
+            <span className="display text-[17px]">
+              {isReel ? "Publicar Reel" : "Vender na MUSA"}
+            </span>
             <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent-foreground">
               Gratuito
             </span>
@@ -301,7 +327,11 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
         )}
 
         <div className="px-5 pt-4 pb-28">
-          <p className="pb-4 text-xs text-muted-foreground">{steps[step - 1]}</p>
+          <p className="pb-4 text-xs text-muted-foreground">
+            {isReel && step === 2
+              ? "Passo 2 · Criar Reel (fotos/vídeos verticais)"
+              : steps[step - 1]}
+          </p>
 
           {!user ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
@@ -442,12 +472,20 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
               </div>
               <div className="mb-5">
                 <label className="mb-1.5 block px-1 text-[11.5px] font-bold text-muted-foreground">
-                  Fotos e Vídeos
-                  <span className="ml-1 font-normal text-muted-foreground/60">(opcional)</span>
+                  {isReel ? "Fotos e Vídeos Verticais" : "Fotos e Vídeos"}
+                  <span className="ml-1 font-normal text-muted-foreground/60">
+                    {isReel ? "(obrigatório)" : "(opcional)"}
+                  </span>
                 </label>
+                {isReel && (
+                  <p className="mb-2 px-1 text-[10.5px] text-muted-foreground">
+                    Usa fotos ou vídeos em formato vertical (9:16) para melhor experiência no Reels.
+                  </p>
+                )}
                 <MediaUploader
                   onUploadComplete={(urls) => setMediaUrls((prev) => [...prev, ...urls])}
-                  maxFiles={5}
+                  maxFiles={isReel ? 1 : 5}
+                  capture={isReel ? "environment" : undefined}
                 />
                 {mediaUrls.length > 0 && (
                   <p className="mt-1.5 px-1 text-[10.5px] text-primary font-medium">
@@ -463,9 +501,13 @@ export function SellModal({ open, onClose }: { open: boolean; onClose: () => voi
               <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-primary/20 text-primary">
                 <Check className="size-8" strokeWidth={3} />
               </div>
-              <h3 className="mb-2 text-xl font-bold">Publicação Concluída!</h3>
+              <h3 className="mb-2 text-xl font-bold">
+                {isReel ? "Reel Publicado!" : "Publicação Concluída!"}
+              </h3>
               <p className="text-sm text-muted-foreground">
-                O teu artigo já está disponível na plataforma MUSA.
+                {isReel
+                  ? "O teu reel já está disponível no feed imersivo."
+                  : "O teu artigo já está disponível na plataforma MUSA."}
               </p>
             </div>
           ) : null}

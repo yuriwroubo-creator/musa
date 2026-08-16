@@ -6,6 +6,7 @@ export interface Product {
   image_url: string | null;
   category: string | null;
   vendor_id: string | null;
+  is_reel?: boolean | null;
   created_at: string | null;
   [key: string]: unknown;
 }
@@ -18,6 +19,7 @@ export interface Service {
   image_url: string | null;
   category: string | null;
   vendor_id: string | null;
+  is_reel?: boolean | null;
   created_at: string | null;
   [key: string]: unknown;
 }

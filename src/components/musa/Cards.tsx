@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAudio } from "@/lib/AudioContext";
 import { PlaceholderArt } from "@/components/musa/PlaceholderArt";
 import { DetailModal } from "./DetailModal";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, Link } from "@tanstack/react-router";
 
 function formatPrice(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
@@ -29,7 +29,18 @@ export function ProductCard({
   onBuy,
   onDetails,
 }: {
-  product: Product & { vendor_id?: string | null; description?: string | null; variants?: any[] | null };
+  product: Product & {
+    vendor_id?: string | null;
+    user_id?: string | null;
+    description?: string | null;
+    variants?: any[] | null;
+    profiles?: {
+      id?: string;
+      store_name?: string | null;
+      avatar_url?: string | null;
+      username?: string | null;
+    } | null;
+  };
   onBuy: () => void;
   onDetails: () => void;
 }) {
@@ -48,26 +59,27 @@ export function ProductCard({
 
   // Safe fallbacks for rendering
   const displayTitle = product.name || product.title || "Produto sem título";
-  const displayStore = product.store_name || product.store || "Loja MUSA";
   const displayPrice = formatPrice(product.price);
   const displayImage = imageUrl || product.image_url || "";
-  const displayRating = product.rating || "Novo";
-  const storeId = product.vendor_id || product.store_id || null;
+  const storeUserId = product.user_id || product.profiles?.id || null;
+  const storeName =
+    product.profiles?.store_name ||
+    product.profiles?.username ||
+    "Loja sem nome";
 
-  // Fetch store profile for avatar
   const { data: storeProfile } = useQuery({
-    queryKey: ["store-profile", storeId],
+    queryKey: ["store-profile", storeUserId],
     queryFn: async () => {
-      if (!storeId) return null;
+      if (!storeUserId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", storeId)
+        .eq("id", storeUserId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!storeId,
+    enabled: !!storeUserId && !product.profiles,
   });
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
@@ -91,8 +103,8 @@ export function ProductCard({
 
   const handleStoreClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (storeId) {
-      navigate({ to: "/store/$id", params: { id: storeId } });
+    if (storeUserId) {
+      navigate({ to: "/store/$id", params: { id: storeUserId } });
     }
   };
 
@@ -104,8 +116,9 @@ export function ProductCard({
     onDetails();
   };
 
-  const storeAvatar = storeProfile?.avatar_url || storeProfile?.full_name?.[0] || displayStore[0];
-  const storeName = storeProfile?.full_name || storeProfile?.business_name || displayStore;
+  const profile = product.profiles || storeProfile;
+  const storeAvatar =
+    profile?.avatar_url || profile?.username?.[0] || profile?.store_name?.[0] || storeName[0];
 
   return (
     <article className="group luxe-card animate-rise flex flex-col overflow-hidden rounded-[22px] transition-all duration-300 hover:-translate-y-1 hover:shadow-luxe">
@@ -115,9 +128,9 @@ export function ProductCard({
         onClick={handleStoreClick}
       >
         <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20 overflow-hidden">
-          {storeProfile?.avatar_url ? (
+          {profile?.avatar_url ? (
             <img 
-              src={storeProfile.avatar_url} 
+              src={profile.avatar_url} 
               alt={storeName}
               className="size-full object-cover"
             />
@@ -157,7 +170,7 @@ export function ProductCard({
               else
                 play(audioUrl, {
                   title: displayTitle,
-                  creator: displayStore,
+                  creator: storeName,
                   artwork: displayImage,
                   subtitle: product.category,
                 });
@@ -225,14 +238,16 @@ export function ProductCard({
         </div>
 
         {/* Link subtil Visitar Loja */}
-        {storeId && (
-          <button
-            onClick={handleStoreClick}
+        {storeUserId && (
+          <Link
+            to="/store/$id"
+            params={{ id: storeUserId }}
+            onClick={(e) => e.stopPropagation()}
             className="mt-2 text-[10px] font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
           >
             <Store className="size-3" />
             Visitar Loja
-          </button>
+          </Link>
         )}
       </div>
     </article>
