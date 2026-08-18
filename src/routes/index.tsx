@@ -699,18 +699,18 @@ function Index() {
   ]);
 
   return (
+    <>
       <InstallBanner />
+      <div className="min-h-screen pb-28 lg:pb-0">
+        <SiteHeader
+          query={query}
+          onQueryChange={setQuery}
+          cartCount={cart.reduce((total, item) => total + item.quantity, 0)}
+          onCartClick={() => setCartOpen(true)}
+          onPublishClick={() => setPublishSheetOpen(true)}
+        />
 
-    <div className="min-h-screen pb-28 lg:pb-0">
-      <SiteHeader
-        query={query}
-        onQueryChange={setQuery}
-        cartCount={cart.reduce((total, item) => total + item.quantity, 0)}
-        onCartClick={() => setCartOpen(true)}
-        onPublishClick={() => setPublishSheetOpen(true)}
-      />
-
-      <main className="mx-auto w-full max-w-6xl px-5 lg:px-8">
+        <main className="mx-auto w-full max-w-6xl px-5 lg:px-8">
         {showHeroSkeleton ? (
           <HeroSkeleton />
         ) : (
@@ -763,12 +763,71 @@ function Index() {
         </div> */}
 
         {q !== "" ? (
-          <SearchResultsView
-            query={query.trim()}
-            loading={loadingDatabaseSearch}
-            products={visibleProducts}
-            services={visibleServices}
-          />
+          <section className="pt-5">
+            <SectionTitle
+              title={`Resultados para "${query.trim()}"`}
+              sub="Produtos e serviços encontrados na MUSA"
+            />
+            {loadingDatabaseSearch && !visibleProducts.length && !visibleServices.length ? (
+              <SectionSkeleton />
+            ) : visibleProducts.length === 0 && visibleServices.length === 0 ? (
+              <Empty message={`Não foi encontrado nenhum resultado para "${query.trim()}".`} />
+            ) : (
+              <div className="space-y-7">
+                {visibleProducts.length > 0 && (
+                  <div>
+                    <h3 className="pt-3 text-sm font-black">Produtos</h3>
+                    <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+                      {visibleProducts.map((product: any) => (
+                        <ProductCard
+                          key={product.id}
+                          product={{
+                            ...product,
+                            variants: product.variants || null,
+                          }}
+                          onBuy={() => {
+                            recordInteraction(product);
+                            setBuyModalItem(product);
+                          }}
+                          onDetails={() => {
+                            recordInteraction(product);
+                            setDetailModalItem(product);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {visibleServices.length > 0 && (
+                  <div>
+                    <h3 className="pt-3 text-sm font-black">Serviços</h3>
+                    <div className="grid gap-3 pt-3.5 lg:grid-cols-2 lg:gap-4">
+                      {visibleServices.map((service: any) => (
+                        <ServiceCard
+                          key={service.id}
+                          service={service}
+                          onBook={() => {
+                            recordInteraction(service);
+                            setBuyModalItem({
+                              ...service,
+                              name: service.name || service.title,
+                              store: service.store || service.vendor_name,
+                              variants: service.variants || null,
+                            });
+                          }}
+                          onDetails={() => {
+                            recordInteraction(service);
+                            setDetailModalItem(service);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
         ) : (
           <>
             <section id="for-you-feed">
@@ -818,201 +877,120 @@ function Index() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-14 border-t border-border-soft">
-        <div className="mx-auto w-full max-w-6xl px-5 py-10 lg:px-8">
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <p className="display text-2xl">
-                MUSA <span className="neon-text align-super text-[12px]">✦</span>
-              </p>
-              <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
-                O mercado de beleza & moda das mulheres de Luanda. Compre, agende e venda
-                gratuitamente.
-              </p>
-            </div>
-            <div>
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.07em] text-muted-foreground">
-                Explorar
-              </p>
-              {["Produtos", "Serviços", "Lojas & Marcas", "Promoções"].map((l) => (
-                <p
-                  key={l}
-                  className="mb-2 text-[12.5px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                >
-                  {l}
+        <footer className="mt-14 border-t border-border-soft">
+          <div className="mx-auto w-full max-w-6xl px-5 py-10 lg:px-8">
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <p className="display text-2xl">
+                  MUSA <span className="neon-text align-super text-[12px]">✦</span>
                 </p>
-              ))}
-            </div>
-            <div>
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.07em] text-muted-foreground">
-                Vendedoras
-              </p>
-              {["Criar conta grátis", "Como funciona", "Dúvidas frequentes", "Suporte"].map((l) => (
-                <p
-                  key={l}
-                  className="mb-2 text-[12.5px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                >
-                  {l}
+                <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
+                  O mercado de beleza & moda das mulheres de Luanda. Compre, agende e venda
+                  gratuitamente.
                 </p>
-              ))}
-            </div>
-            <div>
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.07em] text-muted-foreground">
-                Contacto
-              </p>
-              <p className="mb-2 text-[12.5px] text-muted-foreground">Angola</p>
-              <a
-                href="mailto:romacristiano77@gmail.com"
-                className="mb-2 block text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
-              >
-                romacristiano77@gmail.com
-              </a>
-              <a
-                href="tel:+244946419129"
-                className="mb-2 block text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
-              >
-                +244 946 419 129
-              </a>
-            </div>
-          </div>
-          <div className="mt-8 flex flex-col items-center gap-2 border-t border-border-soft pt-6 sm:flex-row sm:justify-between">
-            <p className="text-[10.5px] text-muted-foreground">
-              © MUSA · Mercado de beleza & moda · Angola
-            </p>
-            <p className="text-[10.5px] text-muted-foreground">
-              Feito com ❤️ para as mulheres angolanas
-            </p>
-          </div>
-        </div>
-      </footer>
-
-      <BuyModal
-        open={!!buyModalItem}
-        onClose={() => setBuyModalItem(null)}
-        product={buyModalItem ? {
-          name: buyModalItem.name || "",
-          price: buyModalItem.price || 0,
-          category: buyModalItem.category || "",
-          store: buyModalItem.store || buyModalItem.vendor_name || "",
-          whatsapp: buyModalItem.whatsapp,
-          vendor_phone: buyModalItem.vendor_phone,
-          phone: buyModalItem.phone,
-          variants: buyModalItem.variants || null,
-        } : { name: "", price: 0, category: "", store: "" }}
-      />
-      <DetailModal
-        open={!!detailModalItem}
-        onClose={() => setDetailModalItem(null)}
-        item={detailModalItem || {}}
-      />
-      <CartSheet
-        open={cartOpen}
-        items={cartItems}
-        total={cartTotal}
-        onClose={() => setCartOpen(false)}
-        onClear={() => {
-          setCart([]);
-          window.localStorage.removeItem("musa-cart");
-          toast.success("Carrinho limpo");
-        }}
-      />
-      <TasteOnboarding
-        open={tasteOpen}
-        profile={tasteProfile}
-        onClose={() => setTasteOpen(false)}
-        onSave={(categories) => {
-          const next = { ...tasteProfile, categories, completed: true };
-          setTasteProfile(next);
-          saveTasteProfile(next);
-          setTasteOpen(false);
-          toast.success("Feed personalizado", {
-            description: "A MUSA vai priorizar conteúdos alinhados aos teus gostos.",
-          });
-        }}
-      />
-    </div>
-  );
-}
-
-function SearchResultsView({
-  query,
-  loading,
-  products,
-  services,
-}: {
-  query: string;
-  loading: boolean;
-  products: any[];
-  services: any[];
-}) {
-  const hasResults = products.length > 0 || services.length > 0;
-
-  return (
-    <section className="pt-5">
-      <SectionTitle
-        title={`Resultados para "${query}"`}
-        sub="Produtos e serviços encontrados na MUSA"
-      />
-      {loading && !hasResults ? (
-        <SectionSkeleton />
-      ) : !hasResults ? (
-        <Empty message={`Não foi encontrado nenhum resultado para "${query}".`} />
-      ) : (
-        <div className="space-y-7">
-          {products.length > 0 && (
-            <div>
-              <h3 className="pt-3 text-sm font-black">Produtos</h3>
-              <div className="grid grid-cols-2 gap-3.5 pt-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-                {products.map((product: any) => (
-                  <ProductCard
-                    key={product.id}
-                    product={{
-                      ...product,
-                      variants: product.variants || null,
-                    }}
-                        onBuy={() => {
-                          recordInteraction(product);
-                          setBuyModalItem(product);
-                        }}
-                        onDetails={() => {
-                          recordInteraction(product);
-                          setDetailModalItem(product);
-                        }}
-                  />
+              </div>
+              <div>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.07em] text-muted-foreground">
+                  Explorar
+                </p>
+                {["Produtos", "Serviços", "Lojas & Marcas", "Promoções"].map((l) => (
+                  <p
+                    key={l}
+                    className="mb-2 text-[12.5px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                  >
+                    {l}
+                  </p>
                 ))}
               </div>
-            </div>
-          )}
-
-          {services.length > 0 && (
-            <div>
-              <h3 className="pt-3 text-sm font-black">Serviços</h3>
-              <div className="grid gap-3 pt-3.5 lg:grid-cols-2 lg:gap-4">
-                {services.map((service: any) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    onBook={() => {
-                      recordInteraction(service);
-                      setBuyModalItem({
-                        ...service,
-                        name: service.name || service.title,
-                        store: service.store || service.vendor_name,
-                        variants: service.variants || null,
-                      });
-                    }}
-                    onDetails={() => {
-                      recordInteraction(service);
-                      setDetailModalItem(service);
-                    }}
-                  />
+              <div>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.07em] text-muted-foreground">
+                  Vendedoras
+                </p>
+                {["Criar conta grátis", "Como funciona", "Dúvidas frequentes", "Suporte"].map((l) => (
+                  <p
+                    key={l}
+                    className="mb-2 text-[12.5px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                  >
+                    {l}
+                  </p>
                 ))}
               </div>
+              <div>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.07em] text-muted-foreground">
+                  Contacto
+                </p>
+                <p className="mb-2 text-[12.5px] text-muted-foreground">Angola</p>
+                <a
+                  href="mailto:romacristiano77@gmail.com"
+                  className="mb-2 block text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  romacristiano77@gmail.com
+                </a>
+                <a
+                  href="tel:+244946419129"
+                  className="mb-2 block text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  +244 946 419 129
+                </a>
+              </div>
             </div>
-          )}
-        </div>
-      )}
-    </section>
+            <div className="mt-8 flex flex-col items-center gap-2 border-t border-border-soft pt-6 sm:flex-row sm:justify-between">
+              <p className="text-[10.5px] text-muted-foreground">
+                © MUSA · Mercado de beleza & moda · Angola
+              </p>
+              <p className="text-[10.5px] text-muted-foreground">
+                Feito com ❤️ para as mulheres angolanas
+              </p>
+            </div>
+          </div>
+        </footer>
+
+        <BuyModal
+          open={!!buyModalItem}
+          onClose={() => setBuyModalItem(null)}
+          product={buyModalItem ? {
+            name: buyModalItem.name || "",
+            price: buyModalItem.price || 0,
+            category: buyModalItem.category || "",
+            store: buyModalItem.store || buyModalItem.vendor_name || "",
+            whatsapp: buyModalItem.whatsapp,
+            vendor_phone: buyModalItem.vendor_phone,
+            phone: buyModalItem.phone,
+            variants: buyModalItem.variants || null,
+          } : { name: "", price: 0, category: "", store: "" }}
+        />
+        <DetailModal
+          open={!!detailModalItem}
+          onClose={() => setDetailModalItem(null)}
+          item={detailModalItem || {}}
+        />
+        <CartSheet
+          open={cartOpen}
+          items={cartItems}
+          total={cartTotal}
+          onClose={() => setCartOpen(false)}
+          onClear={() => {
+            setCart([]);
+            window.localStorage.removeItem("musa-cart");
+            toast.success("Carrinho limpo");
+          }}
+        />
+        <TasteOnboarding
+          open={tasteOpen}
+          profile={tasteProfile}
+          onClose={() => setTasteOpen(false)}
+          onSave={(categories) => {
+            const next = { ...tasteProfile, categories, completed: true };
+            setTasteProfile(next);
+            saveTasteProfile(next);
+            setTasteOpen(false);
+            toast.success("Feed personalizado", {
+              description: "A MUSA vai priorizar conteúdos alinhados aos teus gostos.",
+            });
+          }}
+        />
+      </div>
+    </>
   );
 }
 
