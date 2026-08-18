@@ -28,6 +28,8 @@ import {
 
 export const Route = createFileRoute("/")({
   head: () => ({
+import { InstallBanner } from "@/components/musa/InstallBanner";
+
     meta: [
       { title: "MUSA — Mercado de Beleza & Moda em Angola" },
       {
@@ -699,6 +701,8 @@ function Index() {
   ]);
 
   return (
+      <InstallBanner />
+
     <div className="min-h-screen pb-28 lg:pb-0">
       <SiteHeader
         query={query}
