@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
@@ -17,6 +16,7 @@ import { Check, ChevronRight, Play, ShoppingBag, TrendingUp, Wand2, X } from "lu
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import heroLace from "@/assets/prod-lace.jpg";
 import heroVestido from "@/assets/prod-vestido.jpg";
+import { InstallBanner } from "@/components/musa/InstallBanner";
 import {
   getTasteProfile,
   saveTasteProfile,
@@ -28,8 +28,6 @@ import {
 
 export const Route = createFileRoute("/")({
   head: () => ({
-import { InstallBanner } from "@/components/musa/InstallBanner";
-
     meta: [
       { title: "MUSA — Mercado de Beleza & Moda em Angola" },
       {
